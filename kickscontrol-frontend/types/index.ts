@@ -38,6 +38,7 @@ export interface Product {
   imageUrl: string | null
   isActive: boolean
   variants: ProductVariant[]
+  totalStock?: number
 }
 
 export interface CartItem {

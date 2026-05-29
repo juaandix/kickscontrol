@@ -6,12 +6,14 @@ import { useAuth } from '@/context/AuthContext'
 import {
   CubeIcon,
   ChartBarIcon,
+  ShoppingBagIcon,
   ArrowRightEndOnRectangleIcon,
 } from '@heroicons/react/24/outline'
 
 const NAV_ITEMS = [
   { href: '/backoffice', label: 'Dashboard', icon: ChartBarIcon, exact: true },
   { href: '/backoffice/inventory', label: 'Inventario', icon: CubeIcon, exact: false },
+  { href: '/backoffice/orders', label: 'Pedidos', icon: ShoppingBagIcon, exact: false },
 ]
 
 export function BackofficeSidebar() {

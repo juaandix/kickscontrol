@@ -5,12 +5,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { fetchProduct } from '@/lib/products'
 import { StockBadge } from '@/components/ui/StockBadge'
+import { useCart } from '@/context/CartContext'
 import type { ProductVariant } from '@/types'
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const { addItem } = useCart()
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
+  const [adding, setAdding] = useState(false)
 
   const { data: product, isLoading, isError } = useQuery({
     queryKey: ['product', id],
@@ -149,10 +152,21 @@ export default function ProductDetailPage() {
           )}
 
           <button
-            disabled={!selectedVariant || selectedVariant.stockQuantity === 0}
+            disabled={!selectedVariant || selectedVariant.stockQuantity === 0 || adding}
+            onClick={async () => {
+              if (!selectedVariant) return
+              setAdding(true)
+              try {
+                await addItem(selectedVariant.id, 1)
+              } finally {
+                setAdding(false)
+              }
+            }}
             className="w-full py-4 rounded-xl font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors"
           >
-            {!selectedVariant
+            {adding
+              ? 'Añadiendo...'
+              : !selectedVariant
               ? 'Selecciona una talla'
               : selectedVariant.stockQuantity === 0
               ? 'Sin stock'

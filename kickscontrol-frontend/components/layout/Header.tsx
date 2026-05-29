@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
+import { useCart } from '@/context/CartContext'
+import { CartDrawer } from '@/components/cart/CartDrawer'
 import { ShoppingCartIcon, UserIcon, ArrowRightEndOnRectangleIcon } from '@heroicons/react/24/outline'
 
-interface HeaderProps {
-  cartCount?: number
-}
-
-export function Header({ cartCount = 0 }: HeaderProps) {
+export function Header() {
   const { isAuthenticated, user, logout } = useAuth()
+  const { totalItems, openCart } = useCart()
+  const cartCount = totalItems
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-neutral-200 shadow-sm">
@@ -57,8 +57,8 @@ export function Header({ cartCount = 0 }: HeaderProps) {
               </Link>
             )}
 
-            <Link
-              href="/cart"
+            <button
+              onClick={openCart}
               className="relative p-2 rounded-lg hover:bg-neutral-100 text-neutral-700"
             >
               <ShoppingCartIcon className="w-5 h-5" />
@@ -67,10 +67,11 @@ export function Header({ cartCount = 0 }: HeaderProps) {
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
               )}
-            </Link>
+            </button>
           </div>
         </div>
       </div>
+      <CartDrawer />
     </header>
   )
 }

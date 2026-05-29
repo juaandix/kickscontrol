@@ -1,0 +1,75 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: kickscontrol-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-kickscontrol}
+      POSTGRES_USER: ${DB_USER:-kickscontrol_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-kickscontrol_pass}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./kickscontrol-backend/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./kickscontrol-backend/src/main/resources/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-kickscontrol_user} -d ${DB_NAME:-kickscontrol}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kickscontrol-net
+    profiles: [db, full]
+
+  backend:
+    build:
+      context: ./kickscontrol-backend
+      dockerfile: Dockerfile
+    container_name: kickscontrol-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-kickscontrol}
+      DB_USER: ${DB_USER:-kickscontrol_user}
+      DB_PASSWORD: ${DB_PASSWORD:-kickscontrol_pass}
+      JWT_SECRET: ${JWT_SECRET:-kickscontrol-super-secret-key-change-in-prod-min-32-chars}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - kickscontrol-net
+    profiles: [full]
+
+  frontend:
+    build:
+      context: ./kickscontrol-frontend
+      dockerfile: Dockerfile
+    container_name: kickscontrol-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - kickscontrol-net
+    profiles: [full]
+
+volumes:
+  postgres_data:
+
+networks:
+  kickscontrol-net:
+    driver: bridge

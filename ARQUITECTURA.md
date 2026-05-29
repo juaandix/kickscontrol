@@ -24,6 +24,9 @@
    - [Route Groups de Next.js](#55-route-groups-de-nextjs)
    - [Backoffice: tabla expandible y modal de stock](#56-backoffice-tabla-expandible-y-modal-de-stock)
 6. [Decisiones transversales y de calidad](#6-decisiones-transversales-y-de-calidad)
+   - [Conventional Commits y Git Flow](#conventional-commits)
+   - [Suite de tests](#suite-de-tests-junit-5--mockito--webmvctest--vitest--rtl)
+   - [Imágenes de producto](#imágenes-de-producto-estrategia-de-urls)
 7. [Sprint 3 — Carrito y Checkout Transaccional](#7-sprint-3--carrito-y-checkout-transaccional)
    - [CartContext sobre TanStack Query](#71-cartcontext-sobre-tanstack-query)
    - [Checkout con defensa en 3 capas](#72-checkout-con-defensa-en-3-capas)
@@ -34,6 +37,7 @@
    - [KPIs de retail reales](#83-kpis-de-retail-reales)
    - [Recharts sobre Chart.js](#84-recharts-sobre-chartjs)
    - [Estado de fechas en URL en el dashboard](#85-estado-de-fechas-en-url-en-el-dashboard)
+9. [Reflexión final — Portfolio vs. Producción](#9-reflexión-final--portfolio-vs-producción)
 
 ---
 
@@ -241,6 +245,36 @@ SecurityFilterChain
 ```
 
 El filtro `OncePerRequestFilter` garantiza que se ejecuta **exactamente una vez** por request, incluso en cadenas de filtros complejas. Es el contrato correcto para un filtro de autenticación.
+
+#### Bug de seguridad detectado por los tests: `isTokenValid()` lanzaba excepción en lugar de retornar `false`
+
+Durante la escritura del test `isTokenValid_expiredToken_returnsFalse` se descubrió un bug real de producción en `JwtUtil`:
+
+```java
+// ❌ Implementación original — incorrecta
+public boolean isTokenValid(String token, String email) {
+    return extractEmail(token).equals(email) && !isTokenExpired(token);
+    // extractEmail() lanza ExpiredJwtException si el token está caducado
+    // → JwtAuthenticationFilter crashea con 500 en lugar de rechazar con 401
+}
+```
+
+El problema: `extractEmail()` llama a `Jwts.parser().parseSignedClaims()`, que lanza `ExpiredJwtException` para tokens caducados. Al no estar capturada, la excepción propagaba por `JwtAuthenticationFilter` y Spring la convertía en un HTTP 500, en lugar de simplemente rechazar la petición.
+
+```java
+// ✅ Implementación corregida
+public boolean isTokenValid(String token, String email) {
+    try {
+        return extractEmail(token).equals(email) && !isTokenExpired(token);
+    } catch (io.jsonwebtoken.JwtException e) {
+        return false;  // Token inválido, expirado o manipulado → rechazar silenciosamente
+    }
+}
+```
+
+**Por qué se captura `JwtException` y no solo `ExpiredJwtException`:** la clase base `JwtException` cubre también `MalformedJwtException` (token corrupto), `UnsupportedJwtException` (algoritmo incorrecto) y `SignatureException` (firma inválida). Cualquiera de estos escenarios debe resultar en un `false`, no en un crash.
+
+Este bug no habría sido detectable con tests de integración end-to-end típicos porque los tokens de prueba siempre son válidos. Solo un test unitario específico para el caso del token expirado lo expuso.
 
 #### Por qué `ROLE_` prefix en las autoridades
 
@@ -625,6 +659,159 @@ Cada Sprint se desarrolla en su rama `feature/sprint-N-nombre`, se hace un PR (i
 
 La UI de Swagger permite probar la API directamente desde el navegador sin necesidad de Postman o curl. Es especialmente valioso en un portfolio: un reclutador técnico puede levantar el stack con `make full` y explorar los endpoints sin escribir ni una línea de código.
 
+### Suite de tests: JUnit 5 + Mockito + @WebMvcTest / Vitest + RTL
+
+El proyecto tiene cobertura de tests para las dos capas de lógica más críticas: la seguridad del backend y el comportamiento de los componentes frontend.
+
+#### Backend — Por qué Mockito puro y no H2 para los servicios
+
+La opción habitual para tests de servicio Spring es arrancar un contexto con H2 en memoria. Se descartó por una razón concreta: **H2 no soporta los tipos ENUM definidos a nivel de PostgreSQL**. El schema usa:
+
+```sql
+CREATE TYPE user_role     AS ENUM ('USER', 'ADMIN', 'SHIFT_LEADER');
+CREATE TYPE order_status  AS ENUM ('PENDING', 'CONFIRMED', 'SHIPPED', ...);
+```
+
+H2 ignora las instrucciones `CREATE TYPE` y el contexto de Spring falla al arrancar. Las alternativas eran:
+
+| Opción | Problema |
+|---|---|
+| H2 con modo PostgreSQL | No implementa `CREATE TYPE ... AS ENUM` de PostgreSQL |
+| Testcontainers | Correcto pero requiere Docker en CI y ralentiza los tests ×10 |
+| Mockito puro | Sin BD, sin contexto Spring, tests en < 50ms cada uno |
+
+Se eligió **Mockito puro** para los tests de servicio: `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` + mocks de repositorios. Los tests verifican la lógica de negocio (flujo de checkout, merge de ítems de carrito, descuento de stock) sin necesidad de una base de datos real.
+
+```java
+@ExtendWith(MockitoExtension.class)
+class CartServiceImplTest {
+    @InjectMocks CartServiceImpl cartService;
+    @Mock CartItemRepository cartItemRepository;
+    @Mock ProductVariantRepository variantRepository;
+    // ...
+
+    @Test
+    void addItem_existingItem_mergesQuantity() {
+        when(cartItemRepository.findByUserIdAndVariantId(1L, 1L))
+            .thenReturn(Optional.of(existing));
+        cartService.addItem(1L, 1L, 2);
+        assertThat(existing.getQuantity()).isEqualTo(5); // 3 + 2
+    }
+}
+```
+
+#### Backend — @WebMvcTest + @AutoConfigureMockMvc(addFilters = false)
+
+Los tests de controlador usan el slice `@WebMvcTest` que arranca solo el contexto MVC (sin BD, sin servicios reales). El problema: Spring Security añade automáticamente todos los filtros, incluido `JwtAuthenticationFilter`, que intenta validar un Bearer token en cada request del test.
+
+Solución: `@AutoConfigureMockMvc(addFilters = false)` deshabilita toda la cadena de filtros servlet para los tests. Esto permite probar la lógica de los controladores (mapeo de rutas, serialización JSON, códigos HTTP) sin necesidad de generar tokens JWT válidos en cada test.
+
+```java
+@WebMvcTest(AuthController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class AuthControllerTest {
+    @Autowired MockMvc mockMvc;
+    @MockBean AuthService authService;
+    // Sin JwtAuthenticationFilter, sin UserDetailsService real
+
+    @Test
+    void login_validCredentials_returns200WithToken() throws Exception {
+        when(authService.login(any())).thenReturn(new AuthResponseDto("tok", "user@test.com", "USER"));
+        mockMvc.perform(post("/api/auth/login").contentType(APPLICATION_JSON).content(...))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.data.token").value("tok"));
+    }
+}
+```
+
+#### Inyección de `@Value` en JwtUtil con `ReflectionTestUtils`
+
+`JwtUtil` tiene dos campos inyectados por `@Value` que no estarían disponibles en un test unitario sin contexto Spring:
+
+```java
+@Value("${jwt.secret}")      private String secret;
+@Value("${jwt.expiration}")  private long expirationMs;
+```
+
+Se usa `ReflectionTestUtils.setField()` para inyectarlos programáticamente:
+
+```java
+@BeforeEach
+void setup() {
+    jwtUtil = new JwtUtil();
+    ReflectionTestUtils.setField(jwtUtil, "secret", "test-secret-key-minimum-32-chars-for-hmac!!");
+    ReflectionTestUtils.setField(jwtUtil, "expirationMs", 3600000L);
+}
+```
+
+Este patrón evita tener que arrancar el contexto Spring completo solo para probar una clase de utilidad.
+
+#### Frontend — Vitest + React Testing Library para Next.js + React 19
+
+La suite de tests de frontend usa **Vitest 4.x** (no Jest) por compatibilidad con el ecosistema de módulos ESM de Next.js 16 y React 19. Jest requiere configuración adicional para transformar los módulos de Next.js; Vitest funciona sin configuración especial al compartir el pipeline de Vite.
+
+**Mocking de `next/navigation` y contextos:**
+
+```typescript
+// __tests__/pages/login.test.tsx
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ login: mockLogin }),
+}))
+
+// ⚠️ Import DESPUÉS de declarar los mocks
+const { default: LoginPage } = await import('@/app/login/page')
+```
+
+El `await import()` dinámico después de los `vi.mock()` es un patrón específico de Vitest para garantizar que el módulo se carga con los mocks ya activos. En Jest se usaría `jest.mock()` + `require()`, pero Vitest con ESM nativo requiere este orden explícito.
+
+### Imágenes de producto — Estrategia de URLs
+
+#### El problema con los CDNs de marca
+
+Los assets de producto de Nike, Adidas, Puma, etc. no son accesibles mediante URLs predecibles o documentadas. Los CDNs de marca (`static.nike.com`, `assets.adidas.com`) usan:
+
+- UUIDs de producto generados internamente para cada SKU y colorway
+- Autenticación o rate limiting que bloquea requests sin cookies de sesión
+- Rutas que cambian con cada actualización del catálogo
+
+Intentar construir URLs del tipo `https://static.nike.com/a/images/air-max-90.jpg` inevitablemente genera 404, como ocurrió en el seed inicial del proyecto.
+
+#### Solución adoptada
+
+Se adoptó una estrategia de dos fuentes según la accesibilidad de los assets:
+
+| Marca | Fuente | Método |
+|---|---|---|
+| Nike (Air Max 90, AF1, Jordan 1) | `static.nike.com` | URL extraída del `og:image` de cada página de producto. Accesible con user-agent de navegador. |
+| Adidas, Puma, NB, Converse, Vans | `upload.wikimedia.org` | Fotos reales de cada modelo bajo licencia CC-BY-SA / dominio público en Wikimedia Commons. |
+
+Las URLs de Nike obtenidas del `og:image` son las fotos oficiales de producto en el CDN de Nike, accesibles públicamente sin autenticación:
+
+```
+https://static.nike.com/a/images/t_default/
+  u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,   ← layer de fondo (mismo para todos)
+  c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/
+  dd656a06-b72a-45a4-8f5b-468693589ece/     ← UUID específico del producto
+  NIKE+AIR+MAX+90.png
+```
+
+Wikimedia Commons proporciona imágenes reales de los modelos exactos (`Adidas_Stan_Smith.png`, `New_Balance_2002R.jpg`, `Puma_Suede.jpg`) bajo licencias libres, sin restricciones de hotlinking.
+
+#### next/image y `remotePatterns`
+
+```typescript
+// next.config.ts
+remotePatterns: [
+  { hostname: "static.nike.com" },       // Nike CDN oficial
+  { hostname: "upload.wikimedia.org" },  // Wikimedia Commons
+]
+```
+
+`next/image` requiere lista blanca explícita de hostnames. Cualquier hostname no declarado genera un error en tiempo de ejecución. La lista se mantiene mínima deliberadamente: solo los dos orígenes realmente utilizados.
+
 ### `@Transactional(readOnly = true)` en queries de lectura
 
 ```java
@@ -940,11 +1127,13 @@ Este proyecto está diseñado para demostrar capacidad técnica real, pero algun
 | Sin rate limiting en auth | `spring-security-ratelimit` o API Gateway |
 | Checkout sin idempotency key | Header `Idempotency-Key` para evitar dobles cobros |
 | Analytics con queries directas | Queries sobre réplica de lectura (no en BD de OLTP) |
-| Imágenes en URLs externas | CDN propio (Cloudflare, CloudFront) |
+| Imágenes en `static.nike.com` + Wikimedia | CDN propio (Cloudflare Images / CloudFront) con assets propios |
+| URLs de og:image de Nike (pueden cambiar) | Contract tests o monitoring de las URLs de activos |
 | Un único nodo de BD | Cluster PostgreSQL con réplica y backups automáticos |
+| Mockito puro en tests de servicio | Testcontainers con PostgreSQL real para cobertura de ENUM, constraints y triggers |
 
 Conocer estas diferencias es tan importante como saber construir el sistema. Las decisiones de portfolio se tomaron deliberadamente para mantener el stack manejable unipersonalmente mientras se demuestra el patrón correcto en cada capa.
 
 ---
 
-*Documento de arquitectura del proyecto KicksControl. Sprints 1–4 completados. Última actualización: Sprint 4.*
+*Documento de arquitectura del proyecto KicksControl. Sprints 1–4 completados + suite de tests + fix de imágenes. Última actualización: 2026-05-29.*

@@ -24,7 +24,16 @@
    - [Route Groups de Next.js](#55-route-groups-de-nextjs)
    - [Backoffice: tabla expandible y modal de stock](#56-backoffice-tabla-expandible-y-modal-de-stock)
 6. [Decisiones transversales y de calidad](#6-decisiones-transversales-y-de-calidad)
-7. [Decisiones pendientes — Sprints 3 y 4](#7-decisiones-pendientes--sprints-3-y-4)
+7. [Sprint 3 — Carrito y Checkout Transaccional](#7-sprint-3--carrito-y-checkout-transaccional)
+   - [CartContext sobre TanStack Query](#71-cartcontext-sobre-tanstack-query)
+   - [Checkout con defensa en 3 capas](#72-checkout-con-defensa-en-3-capas)
+   - [clearCart() dentro de la transacción](#73-clearcart-dentro-de-la-transacción)
+8. [Sprint 4 — KPI Dashboard y Analytics](#8-sprint-4--kpi-dashboard-y-analytics)
+   - [EntityManager directo para consultas analíticas](#81-entitymanager-directo-para-consultas-analíticas)
+   - [DATE_TRUNC y granularidad dinámica](#82-date_trunc-y-granularidad-dinámica)
+   - [KPIs de retail reales](#83-kpis-de-retail-reales)
+   - [Recharts sobre Chart.js](#84-recharts-sobre-chartjs)
+   - [Estado de fechas en URL en el dashboard](#85-estado-de-fechas-en-url-en-el-dashboard)
 
 ---
 
@@ -641,38 +650,301 @@ En lugar de gestionar las fechas de creación en el código de servicio, las ent
 
 ---
 
-## 7. Decisiones pendientes — Sprints 3 y 4
+## 7. Sprint 3 — Carrito y Checkout Transaccional
 
-### Sprint 3: Checkout transaccional — defensa en 3 capas
+### 7.1 CartContext sobre TanStack Query
 
-El flujo de compra implementará tres niveles de protección contra el problema de "dos usuarios compran el último par":
+La mayoría de portfolios implementan el carrito con `useState` + `localStorage`. Esta elección tiene problemas reales en producción:
 
-```
-Capa 1 — @Version (Optimistic Lock)
-    Hibernate detecta conflictos en memoria. Rápido, sin bloqueo de BD.
-
-Capa 2 — SELECT FOR UPDATE (Pessimistic Lock)
-    La query findByIdForUpdate() ya está preparada en ProductVariantRepository.
-    Bloquea la fila durante la transacción. Garantía total, coste en throughput.
-
-Capa 3 — CHECK (stock_quantity >= 0)
-    Constraint de base de datos. Safety net absoluto.
-    Ningún bug de aplicación puede poner el stock en negativo.
+```typescript
+// Patrón naive — problemas reales
+const [items, setItems] = useState<CartItem[]>([])
+useEffect(() => {
+  const saved = localStorage.getItem('cart')
+  if (saved) setItems(JSON.parse(saved))
+}, [])
+// ¿Y si el usuario abre dos pestañas? ¿Y si el stock cambia?
 ```
 
-### Sprint 4: KPI Dashboard — métricas de retail reales
+En KicksControl el carrito es **estado de servidor** gestionado con TanStack Query:
 
-El dashboard implementará métricas que van más allá de las habituales en portfolios de e-commerce:
+```typescript
+// CartContext.tsx
+const { data: cart } = useQuery({
+  queryKey: ['cart'],
+  queryFn: fetchCart,
+})
 
-| Métrica | Fórmula | Relevancia |
+const addMutation = useMutation({
+  mutationFn: ({ variantId, quantity }) => addToCart(variantId, quantity),
+  onSuccess: (updatedCart) => queryClient.setQueryData(['cart'], updatedCart),
+})
+```
+
+Las ventajas son fundamentales:
+
+| Aspecto | useState + localStorage | TanStack Query (server state) |
 |---|---|---|
-| Ticket Medio | revenue total / nº pedidos | KPI universal de retail |
-| Sell-Through Rate | unidades vendidas / unidades recibidas | Estándar en buying |
-| Días de Cobertura | stock actual / promedio ventas diarias | Gestión de reposición |
-| Tasa de Stock Crítico | variantes con stock ≤ 5 / total variantes | Alertas operativas |
+| Sincronización entre pestañas | No hay | El servidor es la fuente de verdad |
+| Stock actualizado | No (guarda el estado viejo) | Sí, cada sesión refleja el stock real |
+| Usuario registrado en otro dispositivo | Carrito perdido | Carrito persiste en BD por `user_id` |
+| Concurrencia | Race conditions silenciosas | El servidor serializa las operaciones |
 
-Las vistas SQL `v_top_sellers` y `v_product_stock_summary` ya están creadas en el schema para servir estas queries de forma eficiente.
+El backend almacena el carrito en la tabla `cart_items` con `user_id`, lo que significa que un usuario puede empezar una compra en el móvil y terminarla en el ordenador.
+
+### 7.2 Checkout con defensa en 3 capas
+
+El problema del "overselling" — vender más unidades de las que hay en stock — es el bug crítico de cualquier e-commerce. En un sistema concurrente con múltiples usuarios comprando el mismo producto, una implementación naive falla:
+
+```
+Usuario A: lee stock = 1    → comprueba OK
+Usuario B: lee stock = 1    → comprueba OK
+Usuario A: descuenta stock = 0  → éxito
+Usuario B: descuenta stock = -1 → ERROR: stock negativo
+```
+
+KicksControl implementa tres capas de protección independientes:
+
+#### Capa 1 — `@Version` (Optimistic Locking)
+
+```java
+// ProductVariant.java
+@Version
+private Long version;
+```
+
+Hibernate añade automáticamente `AND version = ?` en todos los `UPDATE` de esta entidad. Si dos transacciones leen la misma versión, solo la primera en hacer commit tendrá éxito. La segunda lanza `OptimisticLockException` y hace rollback.
+
+**Cuándo es suficiente:** en sistemas con poca contención (la mayoría de los casos). Es la capa más barata porque no bloquea filas.
+
+#### Capa 2 — `SELECT FOR UPDATE` (Pessimistic Locking)
+
+```java
+// ProductVariantRepository.java
+@Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("SELECT v FROM ProductVariant v WHERE v.id = :id")
+Optional<ProductVariant> findByIdForUpdate(@Param("id") Long id);
+```
+
+Esta query traduce a:
+```sql
+SELECT * FROM product_variants WHERE id = ? FOR UPDATE
+```
+
+PostgreSQL bloquea la fila para escritura durante toda la transacción. Cualquier otra transacción que intente leer o modificar esa fila queda en espera hasta que la primera haga commit o rollback.
+
+**Cuándo es necesario:** en ventanas de alta contención (flash sales, lanzamientos). Garantía total a coste de throughput.
+
+#### Capa 3 — `CHECK (stock_quantity >= 0)` (Database Constraint)
+
+```sql
+-- schema.sql
+stock_quantity  INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
+```
+
+Esta es la última línea de defensa. Aunque las capas 1 y 2 fallen por un bug de aplicación, la base de datos rechazará cualquier actualización que deje el stock en negativo con un `DataIntegrityViolationException`. **Ningún bug de código de aplicación puede crear stock negativo**.
+
+#### La arquitectura completa del método `checkout()`
+
+```java
+@Transactional  // Toda la operación es atómica
+public OrderResponseDto checkout(Long userId, CheckoutRequest request) {
+    List<CartItem> cartItems = cartItemRepository.findByUserId(userId);
+    if (cartItems.isEmpty()) throw new BusinessException("Cart is empty");
+
+    Order order = Order.builder().user(user).status(OrderStatus.PENDING).build();
+
+    for (CartItem cartItem : cartItems) {
+        // Capa 2: bloqueo pesimista en la fila de variante
+        ProductVariant variant = variantRepository.findByIdForUpdate(variantId)
+            .orElseThrow(() -> new ResourceNotFoundException("Variant", variantId));
+
+        int requested = cartItem.getQuantity();
+        if (variant.getStockQuantity() < requested) {
+            throw new InsufficientStockException(variant.getSku(), requested, variant.getStockQuantity());
+        }
+
+        // Capa 3: si esto llega a -1, el CHECK de BD lo rechazará
+        variant.setStockQuantity(variant.getStockQuantity() - requested);
+
+        // Snapshot de precio: independiente de cambios futuros de catálogo
+        BigDecimal unitPrice = variant.getProduct().getBasePrice().add(variant.getPriceModifier());
+
+        order.addItem(OrderItem.builder()
+            .variant(variant).quantity(requested).unitPrice(unitPrice).build());
+    }
+
+    Order saved = orderRepository.save(order);
+    cartService.clearCart(userId);  // Atómico dentro de la misma transacción
+    return OrderResponseDto.from(saved);
+}
+```
+
+**Por qué no hay Capa 1 explícita en el servicio:** `@Version` actúa automáticamente en el `save()` de Hibernate. No hay código adicional que escribir; es transparente.
+
+### 7.3 clearCart() dentro de la transacción
+
+```java
+cartService.clearCart(userId);  // dentro del @Transactional de checkout()
+```
+
+Esta línea es deliberada. Al llamar a `clearCart()` dentro del mismo método `@Transactional`, el vaciado del carrito forma parte de la misma transacción que la creación del pedido. Si el `orderRepository.save()` falla después del `clearCart()`, ambas operaciones hacen rollback.
+
+La alternativa — limpiar el carrito en el controlador o después de hacer commit — crearía una ventana donde el pedido existe pero el carrito no se ha vaciado, causando duplicados.
 
 ---
 
-*Documento generado durante el desarrollo del proyecto KicksControl. Última actualización: Sprint 2 completado.*
+## 8. Sprint 4 — KPI Dashboard y Analytics
+
+### 8.1 EntityManager directo para consultas analíticas
+
+El servicio de analytics no usa los repositorios JPA convencionales. Usa `EntityManager` directamente:
+
+```java
+// AnalyticsServiceImpl.java
+@PersistenceContext
+private EntityManager em;
+
+public KpiSummaryDto getSummary(LocalDate from, LocalDate to) {
+    String jpql = """
+        SELECT SUM(oi.quantity * oi.unitPrice), COUNT(DISTINCT o.id), SUM(oi.quantity)
+        FROM Order o JOIN o.items oi
+        WHERE o.status IN ('CONFIRMED', 'SHIPPED', 'DELIVERED')
+        AND CAST(o.createdAt AS date) BETWEEN :from AND :to
+        """;
+    Object[] row = (Object[]) em.createQuery(jpql)
+        .setParameter("from", from).setParameter("to", to)
+        .getSingleResult();
+    ...
+}
+```
+
+**Por qué no un método en el repositorio:**
+
+Los repositorios JPA están diseñados para queries sobre una sola entidad con su grafo de relaciones. Las queries analíticas son multi-entidad, con agregados (`SUM`, `COUNT`), y algunas requieren SQL nativo para funciones específicas de PostgreSQL como `DATE_TRUNC`. Usar `EntityManager` directamente da control total sobre el JPQL o SQL, sin las limitaciones del método naming de Spring Data.
+
+**Por qué no una View materializada:**
+
+El schema define vistas `v_top_sellers` y `v_product_stock_summary`, pero las queries de analytics tienen parámetros dinámicos (rango de fechas, granularidad). Una vista materializada es estática por naturaleza. Las queries directas con `EntityManager` permiten pasar cualquier `from`/`to` sin tocar el schema.
+
+### 8.2 DATE_TRUNC y granularidad dinámica
+
+La query del gráfico de revenue soporta tres granularidades: día, semana, mes. Esto se implementa con SQL nativo usando la función de PostgreSQL `DATE_TRUNC`:
+
+```java
+String sql = """
+    SELECT DATE_TRUNC(:trunc, o.created_at) AS period,
+           SUM(oi.quantity * oi.unit_price) AS revenue,
+           COUNT(DISTINCT o.id) AS orders
+    FROM orders o
+    JOIN order_items oi ON oi.order_id = o.id
+    WHERE o.status IN ('CONFIRMED','SHIPPED','DELIVERED')
+    AND o.created_at BETWEEN :from AND :to
+    GROUP BY period
+    ORDER BY period
+    """;
+```
+
+Con `granularity = 'week'`, PostgreSQL trunca todas las fechas al lunes de su semana y las agrupa automáticamente. El parámetro `:trunc` acepta `'day'`, `'week'` o `'month'`.
+
+**Por qué SQL nativo aquí y no JPQL:**
+
+`DATE_TRUNC` es una función de PostgreSQL sin equivalente en JPQL estándar. JPQL tiene `FUNCTION()` para llamar funciones de BD, pero la sintaxis es más verbosa y no aporta beneficio en este caso ya que la portabilidad de BD no es un requisito del proyecto.
+
+### 8.3 KPIs de retail reales
+
+El dashboard implementa métricas que no se ven en portfolios de e-commerce convencionales, directamente derivadas de operaciones reales de turno en tienda:
+
+#### Sell-Through Rate (STR)
+
+```
+STR = (unidades vendidas × 100) / (unidades vendidas + stock actual)
+```
+
+El STR mide la eficiencia de la compra de producto. Un STR del 70% en un periodo significa que el 70% del inventario disponible (vendido + en tienda) se convirtió en venta. Es la métrica que los equipos de buying usan para decidir si reordenar o liquidar.
+
+En el código:
+```java
+// JPQL: unidades vendidas en el período
+Long unitsSold = ... // SUM de order_items
+// Nativa: stock actual de todas las variantes activas
+Long currentStock = ((Number) em.createNativeQuery(
+    "SELECT SUM(stock_quantity) FROM product_variants WHERE is_active = true"
+).getSingleResult()).longValue();
+
+BigDecimal sellThrough = BigDecimal.valueOf(unitsSold * 100L)
+    .divide(BigDecimal.valueOf(unitsSold + currentStock), 2, RoundingMode.HALF_UP);
+```
+
+#### Días de Cobertura
+
+```
+Días de Cobertura = stock actual / (unidades vendidas en el período / días del período)
+```
+
+Responde a la pregunta crítica de operaciones: **¿cuántos días aguanta el stock actual al ritmo de ventas actual?** Si el resultado es 5 días y el siguiente pedido al proveedor tarda 7, hay que reordenar hoy.
+
+#### Tasa de Merma (Shrinkage Rate)
+
+```
+Merma = ajustes negativos × 100 / total movimientos de stock
+```
+
+Mide el porcentaje de inventario perdido por robo, daño o error de conteo. En retail, una tasa de merma alta dispara alertas operativas. Se calcula sobre la tabla `stock_movements` con `reason = 'MERMA'` o `delta < 0`.
+
+### 8.4 Recharts sobre Chart.js
+
+La elección de librería de gráficos fue entre Recharts, Chart.js (con react-chartjs-2) y Victory:
+
+| Criterio | Recharts | Chart.js | Victory |
+|---|---|---|---|
+| API | Declarativa JSX | Imperativa (config objects) | Declarativa JSX |
+| Integración React | Nativa (componentes React) | Wrapper externo | Nativa |
+| Responsividad | `ResponsiveContainer` built-in | Manual con resize observers | Manual |
+| Bundle size | ~350 kB | ~250 kB | ~400 kB |
+| Ecosistema | Amplio, bien documentado | Muy amplio | Menor |
+
+**Por qué Recharts:**
+
+La API declarativa de Recharts es natural para React. Un `LineChart` es un componente React con hijos `Line`, `XAxis`, `Tooltip` — el mismo modelo mental que el resto de la aplicación. Chart.js usa objetos de configuración imperativa que se sienten ajenos al paradigma declarativo de React.
+
+```tsx
+// Recharts — declarativo y natural en React
+<LineChart data={data}>
+  <XAxis dataKey="date" />
+  <YAxis />
+  <Tooltip formatter={(v) => [`€${v}`, 'Ingresos']} />
+  <Line type="monotone" dataKey="revenue" stroke="#f97316" />
+</LineChart>
+```
+
+### 8.5 Estado de fechas en URL en el dashboard
+
+A diferencia del catálogo (donde el URL state es para SEO y sharing), en el dashboard la razón es **reproducibilidad de reportes**. Un Shift Leader que cierra el turno y quiere volver a revisar las cifras del día puede usar el botón atrás del navegador o guardar la URL como marcador:
+
+```
+/backoffice?from=2026-05-01&to=2026-05-29&granularity=week
+```
+
+En este sprint, los pickers de fecha usan `useState` local en lugar de `searchParams` (a diferencia del catálogo). La decisión fue pragmática: el dashboard es una herramienta de uso privado y la reproducibilidad no es crítica. Si el proyecto escalase a un equipo real donde los managers comparten reportes, migrar a URL state sería el siguiente paso natural.
+
+---
+
+## 9. Reflexión final — Portfolio vs. Producción
+
+Este proyecto está diseñado para demostrar capacidad técnica real, pero algunas decisiones serían distintas en producción:
+
+| Decisión de portfolio | Variante de producción |
+|---|---|
+| JWT en `localStorage` | `HttpOnly cookie` para evitar XSS |
+| Sin rate limiting en auth | `spring-security-ratelimit` o API Gateway |
+| Checkout sin idempotency key | Header `Idempotency-Key` para evitar dobles cobros |
+| Analytics con queries directas | Queries sobre réplica de lectura (no en BD de OLTP) |
+| Imágenes en URLs externas | CDN propio (Cloudflare, CloudFront) |
+| Un único nodo de BD | Cluster PostgreSQL con réplica y backups automáticos |
+
+Conocer estas diferencias es tan importante como saber construir el sistema. Las decisiones de portfolio se tomaron deliberadamente para mantener el stack manejable unipersonalmente mientras se demuestra el patrón correcto en cada capa.
+
+---
+
+*Documento de arquitectura del proyecto KicksControl. Sprints 1–4 completados. Última actualización: Sprint 4.*

@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const user: User = { id: 0, ...rest, role: rest.role as User['role'] }
     localStorage.setItem('kc_token', token)
     localStorage.setItem('kc_user', JSON.stringify(user))
+    document.cookie = `kc_token=${token}; path=/; max-age=86400; SameSite=Lax`
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } })
   }, [])
 
@@ -77,12 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const user: User = { id: 0, ...rest, role: rest.role as User['role'] }
     localStorage.setItem('kc_token', token)
     localStorage.setItem('kc_user', JSON.stringify(user))
+    document.cookie = `kc_token=${token}; path=/; max-age=86400; SameSite=Lax`
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } })
   }, [])
 
   const logout = useCallback(() => {
     localStorage.removeItem('kc_token')
     localStorage.removeItem('kc_user')
+    document.cookie = 'kc_token=; path=/; max-age=0'
     dispatch({ type: 'LOGOUT' })
   }, [])
 

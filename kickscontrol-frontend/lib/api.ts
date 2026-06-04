@@ -20,7 +20,13 @@ async function request<T>(
   }
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
-  const json: ApiResponse<T> = await res.json()
+
+  const contentType = res.headers.get('content-type') ?? ''
+  const hasBody = contentType.includes('application/json') && res.status !== 204
+
+  const json: ApiResponse<T> = hasBody
+    ? await res.json()
+    : ({ success: res.ok, message: null, data: null as T, timestamp: '' } as ApiResponse<T>)
 
   if (!res.ok) {
     throw new Error(json.message ?? `Request failed: ${res.status}`)

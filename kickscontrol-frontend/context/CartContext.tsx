@@ -64,9 +64,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   })
 
   const addItem = useCallback(async (variantId: number, quantity: number) => {
+    if (!isAuthenticated) {
+      window.location.href = '/login'
+      return
+    }
     await addMutation.mutateAsync({ variantId, quantity })
     setIsOpen(true)
-  }, [addMutation])
+  }, [addMutation, isAuthenticated])
 
   const updateItem = useCallback(async (itemId: number, quantity: number) => {
     await updateMutation.mutateAsync({ itemId, quantity })

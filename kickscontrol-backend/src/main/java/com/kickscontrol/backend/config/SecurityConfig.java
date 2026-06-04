@@ -17,12 +17,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import jakarta.servlet.http.HttpServletResponse;
+import java.time.Instant;
 import java.util.List;
 
 @Configuration
@@ -54,6 +57,9 @@ public class SecurityConfig {
                 // Resto requiere autenticación
                 .anyRequest().authenticated()
             )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(unauthorizedEntryPoint())
+            )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -61,9 +67,20 @@ public class SecurityConfig {
     }
 
     @Bean
+    public AuthenticationEntryPoint unauthorizedEntryPoint() {
+        return (request, response, ex) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write(
+                "{\"success\":false,\"message\":\"Authentication required\",\"data\":null,\"timestamp\":\"" + Instant.now() + "\"}"
+            );
+        };
+    }
+
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:3001"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

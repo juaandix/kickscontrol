@@ -4,14 +4,18 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminFetchProducts, adminDeleteProduct } from '@/lib/admin'
 import { StockAdjustModal } from '@/components/backoffice/StockAdjustModal'
+import { ProductFormModal } from '@/components/backoffice/ProductFormModal'
 import { StockBadge } from '@/components/ui/StockBadge'
 import type { Product, ProductVariant } from '@/types'
 import { PlusIcon, PencilSquareIcon, AdjustmentsHorizontalIcon, TrashIcon } from '@heroicons/react/24/outline'
+
+type FormTarget = 'new' | Product | null
 
 export default function InventoryPage() {
   const queryClient = useQueryClient()
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [adjustVariant, setAdjustVariant] = useState<(ProductVariant & { productName: string }) | null>(null)
+  const [formTarget, setFormTarget] = useState<FormTarget>(null)
   const [search, setSearch] = useState('')
 
   const { data: products = [], isLoading } = useQuery({
@@ -47,7 +51,10 @@ export default function InventoryPage() {
           <h1 className="text-2xl font-black text-neutral-900">Inventario</h1>
           <p className="text-sm text-neutral-500">{products.length} productos en el sistema</p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors">
+        <button
+          onClick={() => setFormTarget('new')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors"
+        >
           <PlusIcon className="w-4 h-4" />
           Nuevo producto
         </button>
@@ -103,12 +110,20 @@ export default function InventoryPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end" onClick={e => e.stopPropagation()}>
-                        <button className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-500" title="Editar">
+                        <button
+                          onClick={() => setFormTarget(product)}
+                          className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700 transition-colors"
+                          title="Editar"
+                        >
                           <PencilSquareIcon className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => deleteMutation.mutate(product.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-neutral-500 hover:text-red-500"
+                          onClick={() => {
+                            if (confirm(`¿Desactivar "${product.name}"?`)) {
+                              deleteMutation.mutate(product.id)
+                            }
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-neutral-500 hover:text-red-500 transition-colors"
                           title="Desactivar"
                         >
                           <TrashIcon className="w-4 h-4" />
@@ -150,7 +165,7 @@ export default function InventoryPage() {
                                   <td className="py-1.5">
                                     <button
                                       onClick={() => setAdjustVariant({ ...variant, productName: product.name })}
-                                      className="ml-2 p-1 rounded hover:bg-neutral-200 text-neutral-500"
+                                      className="ml-2 p-1 rounded hover:bg-neutral-200 text-neutral-500 transition-colors"
                                       title="Ajustar stock"
                                     >
                                       <AdjustmentsHorizontalIcon className="w-3.5 h-3.5" />
@@ -177,10 +192,18 @@ export default function InventoryPage() {
         )}
       </div>
 
+      {/* Modals */}
       {adjustVariant && (
         <StockAdjustModal
           variant={adjustVariant}
           onClose={() => setAdjustVariant(null)}
+        />
+      )}
+
+      {formTarget !== null && (
+        <ProductFormModal
+          product={formTarget === 'new' ? null : formTarget}
+          onClose={() => setFormTarget(null)}
         />
       )}
     </div>

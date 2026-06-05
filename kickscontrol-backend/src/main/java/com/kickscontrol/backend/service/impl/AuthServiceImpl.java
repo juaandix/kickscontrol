@@ -1,6 +1,7 @@
 package com.kickscontrol.backend.service.impl;
 
 import com.kickscontrol.backend.dto.request.LoginRequest;
+import com.kickscontrol.backend.dto.request.RefreshRequest;
 import com.kickscontrol.backend.dto.request.RegisterRequest;
 import com.kickscontrol.backend.dto.response.AuthResponse;
 import com.kickscontrol.backend.entity.User;
@@ -29,7 +30,6 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Email already registered: " + request.getEmail());
         }
-
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -37,10 +37,8 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(UserRole.USER)
                 .build();
-
         userRepository.save(user);
-        String token = jwtUtil.generateToken(user);
-        return buildAuthResponse(user, token);
+        return buildAuthResponse(user);
     }
 
     @Override
@@ -50,14 +48,34 @@ public class AuthServiceImpl implements AuthService {
         );
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException("User not found"));
-
-        String token = jwtUtil.generateToken(user);
-        return buildAuthResponse(user, token);
+        return buildAuthResponse(user);
     }
 
-    private AuthResponse buildAuthResponse(User user, String token) {
+    @Override
+    public AuthResponse refresh(RefreshRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        if (!jwtUtil.isRefreshToken(refreshToken)) {
+            throw new BusinessException("Invalid refresh token");
+        }
+
+        String email;
+        try {
+            email = jwtUtil.extractEmail(refreshToken);
+        } catch (io.jsonwebtoken.JwtException e) {
+            throw new BusinessException("Refresh token expired or invalid");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        return buildAuthResponse(user);
+    }
+
+    private AuthResponse buildAuthResponse(User user) {
         return AuthResponse.builder()
-                .token(token)
+                .token(jwtUtil.generateToken(user))
+                .refreshToken(jwtUtil.generateRefreshToken(user))
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())

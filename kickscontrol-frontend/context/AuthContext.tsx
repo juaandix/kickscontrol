@@ -66,31 +66,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (payload: LoginPayload) => {
-    const res = await apiClient.post<{ token: string; email: string; firstName: string; lastName: string; role: string }>(
+    const res = await apiClient.post<{ token: string; refreshToken?: string; email: string; firstName: string; lastName: string; role: string }>(
       '/api/auth/login', payload
     )
     const { token, ...rest } = res.data
     const user: User = { id: 0, ...rest, role: rest.role as User['role'] }
     localStorage.setItem('kc_token', token)
+    if (res.data.refreshToken) localStorage.setItem('kc_refresh_token', res.data.refreshToken)
     localStorage.setItem('kc_user', JSON.stringify(user))
-    document.cookie = `kc_token=${token}; path=/; max-age=86400; SameSite=Lax`
+    document.cookie = `kc_token=${token}; path=/; max-age=3600; SameSite=Lax`
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } })
   }, [])
 
   const register = useCallback(async (payload: RegisterPayload) => {
-    const res = await apiClient.post<{ token: string; email: string; firstName: string; lastName: string; role: string }>(
+    const res = await apiClient.post<{ token: string; refreshToken?: string; email: string; firstName: string; lastName: string; role: string }>(
       '/api/auth/register', payload
     )
     const { token, ...rest } = res.data
     const user: User = { id: 0, ...rest, role: rest.role as User['role'] }
     localStorage.setItem('kc_token', token)
+    if (res.data.refreshToken) localStorage.setItem('kc_refresh_token', res.data.refreshToken)
     localStorage.setItem('kc_user', JSON.stringify(user))
-    document.cookie = `kc_token=${token}; path=/; max-age=86400; SameSite=Lax`
+    document.cookie = `kc_token=${token}; path=/; max-age=3600; SameSite=Lax`
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } })
   }, [])
 
   const logout = useCallback(() => {
     localStorage.removeItem('kc_token')
+    localStorage.removeItem('kc_refresh_token')
     localStorage.removeItem('kc_user')
     document.cookie = 'kc_token=; path=/; max-age=0'
     dispatch({ type: 'LOGOUT' })

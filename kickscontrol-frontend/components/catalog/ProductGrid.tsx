@@ -11,6 +11,7 @@ export function ProductGrid() {
   const router = useRouter()
 
   const filters: ProductFilters = {
+    search: searchParams.get('search') ?? undefined,
     brand: searchParams.get('brand') ?? undefined,
     gender: searchParams.get('gender') ?? undefined,
     category: searchParams.get('category') ?? undefined,

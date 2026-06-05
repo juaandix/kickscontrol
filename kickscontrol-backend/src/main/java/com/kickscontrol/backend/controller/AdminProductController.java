@@ -33,7 +33,7 @@ public class AdminProductController {
     @Operation(summary = "List all products including inactive (admin view)")
     public ResponseEntity<ApiResponse<List<ProductResponseDto>>> listAll() {
         // Reutiliza el servicio sin filtros para vista admin completa
-        var page = productService.findAll(null, null, null, null, null, null, null,
+        var page = productService.findAll(null, null, null, null, null, null, null, null,
                 org.springframework.data.domain.PageRequest.of(0, 500));
         return ResponseEntity.ok(ApiResponse.ok(page.getContent()));
     }

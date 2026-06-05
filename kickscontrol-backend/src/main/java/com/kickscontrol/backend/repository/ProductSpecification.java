@@ -12,6 +12,7 @@ import java.util.List;
 public class ProductSpecification {
 
     public static Specification<Product> withFilters(
+            String search,
             String brand,
             String gender,
             String category,
@@ -25,6 +26,14 @@ public class ProductSpecification {
 
             // Siempre solo productos activos
             predicates.add(cb.isTrue(root.get("isActive")));
+
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("name")), pattern),
+                    cb.like(cb.lower(root.get("brand")), pattern)
+                ));
+            }
 
             if (brand != null && !brand.isBlank()) {
                 predicates.add(cb.equal(cb.lower(root.get("brand")), brand.toLowerCase()));

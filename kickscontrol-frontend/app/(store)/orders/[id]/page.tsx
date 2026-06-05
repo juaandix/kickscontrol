@@ -3,14 +3,8 @@
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { fetchOrder } from '@/lib/cart'
-
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PENDING:   { label: 'Pendiente',   color: 'bg-yellow-100 text-yellow-700' },
-  CONFIRMED: { label: 'Confirmado',  color: 'bg-green-100 text-green-700' },
-  SHIPPED:   { label: 'Enviado',     color: 'bg-blue-100 text-blue-700' },
-  DELIVERED: { label: 'Entregado',   color: 'bg-emerald-100 text-emerald-700' },
-  CANCELLED: { label: 'Cancelado',   color: 'bg-red-100 text-red-700' },
-}
+import { OrderTimeline } from '@/components/ui/OrderTimeline'
+import type { OrderStatus } from '@/types'
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -36,8 +30,6 @@ export default function OrderDetailPage() {
     return <div className="py-16 text-center text-neutral-500">Pedido no encontrado.</div>
   }
 
-  const status = STATUS_LABELS[order.status] ?? { label: order.status, color: 'bg-neutral-100 text-neutral-600' }
-
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Éxito banner */}
@@ -52,19 +44,17 @@ export default function OrderDetailPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-neutral-900">Pedido #{order.id}</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            {new Date(order.createdAt).toLocaleDateString('es-ES', {
-              day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-            })}
-          </p>
-        </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${status.color}`}>
-          {status.label}
-        </span>
+      <div>
+        <h1 className="text-2xl font-black text-neutral-900">Pedido #{order.id}</h1>
+        <p className="text-sm text-neutral-500 mt-1">
+          {new Date(order.createdAt).toLocaleDateString('es-ES', {
+            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+          })}
+        </p>
       </div>
+
+      {/* Timeline */}
+      <OrderTimeline status={order.status as OrderStatus} />
 
       {/* Items */}
       <div className="bg-white rounded-2xl border border-neutral-200 divide-y divide-neutral-100">

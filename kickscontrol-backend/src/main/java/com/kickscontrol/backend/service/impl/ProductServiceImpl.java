@@ -34,11 +34,11 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductResponseDto> findAll(String brand, String gender, String category,
+    public Page<ProductResponseDto> findAll(String search, String brand, String gender, String category,
                                             BigDecimal minPrice, BigDecimal maxPrice,
                                             String size, Boolean inStock, Pageable pageable) {
         Specification<Product> spec = ProductSpecification.withFilters(
-                brand, gender, category, minPrice, maxPrice, size, inStock
+                search, brand, gender, category, minPrice, maxPrice, size, inStock
         );
         return productRepository.findAll(spec, pageable)
                 .map(ProductResponseDto::summary);

@@ -7,6 +7,7 @@ import {
   CubeIcon,
   ChartBarIcon,
   ShoppingBagIcon,
+  UsersIcon,
   ArrowRightEndOnRectangleIcon,
 } from '@heroicons/react/24/outline'
 
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/backoffice', label: 'Dashboard', icon: ChartBarIcon, exact: true },
   { href: '/backoffice/inventory', label: 'Inventario', icon: CubeIcon, exact: false },
   { href: '/backoffice/orders', label: 'Pedidos', icon: ShoppingBagIcon, exact: false },
+  { href: '/backoffice/users', label: 'Usuarios', icon: UsersIcon, exact: false },
 ]
 
 export function BackofficeSidebar() {

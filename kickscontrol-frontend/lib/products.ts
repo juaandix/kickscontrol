@@ -3,6 +3,7 @@ import type { PageResponse, Product, ProductFilters } from '@/types'
 
 export async function fetchProducts(filters: ProductFilters = {}): Promise<PageResponse<Product>> {
   const params = new URLSearchParams()
+  if (filters.search) params.set('search', filters.search)
   if (filters.brand) params.set('brand', filters.brand)
   if (filters.gender) params.set('gender', filters.gender)
   if (filters.category) params.set('category', filters.category)

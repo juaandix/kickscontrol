@@ -3,7 +3,8 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { fetchBrands, fetchCategories } from '@/lib/products'
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect } from 'react'
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 
 const SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45']
 const GENDERS = [
@@ -18,6 +19,18 @@ export function FilterPanel() {
 
   const { data: brands = [] } = useQuery({ queryKey: ['brands'], queryFn: fetchBrands })
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: fetchCategories })
+
+  const [searchInput, setSearchInput] = useState(searchParams.get('search') ?? '')
+  useEffect(() => {
+    setSearchInput(searchParams.get('search') ?? '')
+  }, [searchParams])
+
+  const handleSearch = useCallback((value: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('page')
+    value.trim() ? params.set('search', value.trim()) : params.delete('search')
+    router.push(`/?${params.toString()}`)
+  }, [router, searchParams])
 
   const updateFilter = useCallback(
     (key: string, value: string | null) => {
@@ -43,7 +56,7 @@ export function FilterPanel() {
 
   const clearAll = () => router.push('/')
 
-  const hasFilters = ['brand', 'gender', 'category', 'size', 'inStock'].some(k => searchParams.has(k))
+  const hasFilters = ['search', 'brand', 'gender', 'category', 'size', 'inStock'].some(k => searchParams.has(k))
 
   const FilterGroup = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -67,6 +80,20 @@ export function FilterPanel() {
 
   return (
     <aside className="w-full space-y-6">
+      {/* Search */}
+      <div className="relative">
+        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+        <input
+          type="search"
+          placeholder="Buscar zapatillas..."
+          value={searchInput}
+          onChange={e => setSearchInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSearch(searchInput)}
+          onBlur={() => handleSearch(searchInput)}
+          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-200 text-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-neutral-900">Filtros</h2>
         {hasFilters && (

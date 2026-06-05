@@ -35,13 +35,21 @@ export function Header() {
             )}
 
             {isAuthenticated ? (
-              <div className="flex items-center gap-3">
-                <span className="hidden sm:block text-sm text-neutral-500">
-                  {user?.firstName}
-                </span>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-black">
+                    {user?.firstName?.[0]?.toUpperCase()}
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium text-neutral-700">
+                    {user?.firstName}
+                  </span>
+                </Link>
                 <button
                   onClick={logout}
-                  className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-600"
+                  className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500"
                   title="Cerrar sesión"
                 >
                   <ArrowRightEndOnRectangleIcon className="w-5 h-5" />

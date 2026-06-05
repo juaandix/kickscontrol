@@ -81,6 +81,7 @@ export interface PageResponse<T> {
 }
 
 export interface ProductFilters {
+  search?: string
   brand?: string
   category?: string
   gender?: string

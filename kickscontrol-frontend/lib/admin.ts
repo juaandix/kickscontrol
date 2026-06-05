@@ -63,3 +63,34 @@ export async function adminGetLowStock(threshold = 5): Promise<ProductVariant[]>
   const res = await apiClient.get<ProductVariant[]>(`/api/admin/products/inventory/alerts?threshold=${threshold}`)
   return res.data
 }
+
+export interface AdminUser {
+  id: number
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  createdAt: string
+}
+
+export interface CreateUserDto {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  role: string
+}
+
+export async function adminFetchUsers(): Promise<AdminUser[]> {
+  const res = await apiClient.get<AdminUser[]>('/api/admin/users')
+  return res.data
+}
+
+export async function adminCreateUser(dto: CreateUserDto): Promise<AdminUser> {
+  const res = await apiClient.post<AdminUser>('/api/admin/users', dto)
+  return res.data
+}
+
+export async function adminDeleteUser(id: number): Promise<void> {
+  await apiClient.delete(`/api/admin/users/${id}`)
+}

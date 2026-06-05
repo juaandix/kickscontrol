@@ -26,6 +26,7 @@ public class ProductController {
     @GetMapping
     @Operation(summary = "List products with optional filters")
     public ResponseEntity<ApiResponse<Page<ProductResponseDto>>> getProducts(
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String gender,
             @RequestParam(required = false) String category,
@@ -43,7 +44,7 @@ public class ProductController {
                 : Sort.by(sortBy).ascending();
 
         Page<ProductResponseDto> result = productService.findAll(
-                brand, gender, category, minPrice, maxPrice, size, inStock,
+                search, brand, gender, category, minPrice, maxPrice, size, inStock,
                 PageRequest.of(page, pageSize, sort)
         );
         return ResponseEntity.ok(ApiResponse.ok(result));

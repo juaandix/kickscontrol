@@ -13,6 +13,7 @@ import {
   fetchTopSellers,
   fetchOrdersByStatus,
 } from '@/lib/analytics'
+import { LowStockPanel } from '@/components/backoffice/LowStockPanel'
 import {
   BanknotesIcon,
   ShoppingBagIcon,
@@ -210,6 +211,9 @@ export default function BackofficePage() {
       ) : topSellersQ.data ? (
         <TopSellersBarChart data={topSellersQ.data} />
       ) : null}
+
+      {/* Low stock alerts */}
+      <LowStockPanel />
     </div>
   )
 }

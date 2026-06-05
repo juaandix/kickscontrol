@@ -56,6 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       dispatch({ type: 'SET_LOADING', payload: false })
     }
+
+    // Sync state when api.ts detects a 401 (expired token)
+    function handleSessionExpired() {
+      dispatch({ type: 'LOGOUT' })
+    }
+    window.addEventListener('kc:session-expired', handleSessionExpired)
+    return () => window.removeEventListener('kc:session-expired', handleSessionExpired)
   }, [])
 
   const login = useCallback(async (payload: LoginPayload) => {

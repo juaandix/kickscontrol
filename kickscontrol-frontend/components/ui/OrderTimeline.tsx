@@ -46,7 +46,7 @@ export function OrderTimeline({ status }: Props) {
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 px-5 py-5">
-      <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-5">Estado del pedido</p>
+      <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-5">Estado del pedido</p>
 
       <div className="relative flex items-start">
         {/* Progress bar */}
@@ -82,7 +82,7 @@ export function OrderTimeline({ status }: Props) {
               {/* Label */}
               <span
                 className={`text-xs font-semibold text-center leading-tight ${
-                  active ? 'text-orange-600' : done ? 'text-neutral-600' : 'text-neutral-300'
+                  active ? 'text-orange-600' : done ? 'text-neutral-700' : 'text-neutral-400'
                 }`}
               >
                 {step.label}

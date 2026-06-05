@@ -6,7 +6,7 @@ interface StockBadgeProps {
 export function StockBadge({ stock, lowThreshold = 5 }: StockBadgeProps) {
   if (stock === 0) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 text-neutral-500">
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-neutral-800 text-white">
         Agotado
       </span>
     )

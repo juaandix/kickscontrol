@@ -4,7 +4,8 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { hostname: "static.nike.com" },
-      { hostname: "upload.wikimedia.org" },
+      { hostname: "images.puma.com" },
+      { hostname: "m.media-amazon.com" },
     ],
   },
 };

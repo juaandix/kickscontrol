@@ -102,7 +102,7 @@ export function PaymentForm({ amount, onSuccess, onBack }: Props) {
       <div className="space-y-4">
         {/* Card number */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 uppercase tracking-wide mb-1">
+          <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wide mb-1">
             Número de tarjeta *
           </label>
           <input
@@ -120,7 +120,7 @@ export function PaymentForm({ amount, onSuccess, onBack }: Props) {
 
         {/* Cardholder name */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 uppercase tracking-wide mb-1">
+          <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wide mb-1">
             Nombre del titular *
           </label>
           <input
@@ -137,7 +137,7 @@ export function PaymentForm({ amount, onSuccess, onBack }: Props) {
         {/* Expiry + CVV */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-neutral-600 uppercase tracking-wide mb-1">
+            <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wide mb-1">
               Caducidad *
             </label>
             <input
@@ -154,7 +154,7 @@ export function PaymentForm({ amount, onSuccess, onBack }: Props) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-neutral-600 uppercase tracking-wide mb-1">
+            <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wide mb-1">
               CVV *
             </label>
             <input
@@ -211,7 +211,7 @@ export function PaymentForm({ amount, onSuccess, onBack }: Props) {
         </button>
       )}
 
-      <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-400">
+      <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-500">
         <LockClosedIcon className="w-3.5 h-3.5" />
         <span>Pago simulado seguro — KicksControl Portfolio Demo</span>
       </div>

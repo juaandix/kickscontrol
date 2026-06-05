@@ -12,13 +12,13 @@ export function Header() {
   const cartCount = totalItems
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-neutral-200 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-black tracking-tight text-neutral-900">
+            <span className="text-xl font-black tracking-tight text-neutral-900 dark:text-white">
               KICKS<span className="text-orange-500">CONTROL</span>
             </span>
           </Link>
@@ -28,7 +28,7 @@ export function Header() {
             {isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'SHIFT_LEADER') && (
               <Link
                 href="/backoffice"
-                className="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-orange-600 hover:text-orange-700"
+                className="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-orange-500 hover:text-orange-400"
               >
                 Backoffice
               </Link>
@@ -38,18 +38,18 @@ export function Header() {
               <div className="flex items-center gap-2">
                 <Link
                   href="/profile"
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
                   <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-black">
                     {user?.firstName?.[0]?.toUpperCase()}
                   </div>
-                  <span className="hidden sm:block text-sm font-medium text-neutral-700">
+                  <span className="hidden sm:block text-sm font-medium text-neutral-700 dark:text-neutral-200">
                     {user?.firstName}
                   </span>
                 </Link>
                 <button
                   onClick={logout}
-                  className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500"
+                  className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
                   title="Cerrar sesión"
                 >
                   <ArrowRightEndOnRectangleIcon className="w-5 h-5" />
@@ -58,7 +58,7 @@ export function Header() {
             ) : (
               <Link
                 href="/login"
-                className="flex items-center gap-1 text-sm font-medium text-neutral-700 hover:text-neutral-900 p-2 rounded-lg hover:bg-neutral-100"
+                className="flex items-center gap-1 text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 <UserIcon className="w-5 h-5" />
                 <span className="hidden sm:block">Entrar</span>
@@ -67,7 +67,7 @@ export function Header() {
 
             <button
               onClick={openCart}
-              className="relative p-2 rounded-lg hover:bg-neutral-100 text-neutral-700"
+              className="relative p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200"
             >
               <ShoppingCartIcon className="w-5 h-5" />
               {cartCount > 0 && (

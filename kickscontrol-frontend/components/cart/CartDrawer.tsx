@@ -53,9 +53,9 @@ export function CartDrawer() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-neutral-400 font-semibold uppercase">{item.productBrand}</p>
+                  <p className="text-xs text-neutral-500 font-bold uppercase tracking-wide">{item.productBrand}</p>
                   <p className="text-sm font-semibold text-neutral-900 truncate">{item.productName}</p>
-                  <p className="text-xs text-neutral-500">{item.size} / {item.color}</p>
+                  <p className="text-xs text-neutral-600 font-medium">{item.size} · {item.color}</p>
 
                   <div className="flex items-center justify-between mt-2">
                     {/* Quantity selector */}
@@ -78,7 +78,7 @@ export function CartDrawer() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold">{item.subtotal.toFixed(2)} €</span>
+                      <span className="text-sm font-black text-neutral-900">{item.subtotal.toFixed(2)} €</span>
                       <button
                         onClick={() => removeItem(item.id)}
                         className="p-1 rounded hover:bg-red-50 text-neutral-400 hover:text-red-500"

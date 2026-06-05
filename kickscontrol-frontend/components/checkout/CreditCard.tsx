@@ -101,13 +101,13 @@ export function CreditCard({ number, name, expiry, cvv, flipped }: Props) {
           {/* Bottom row */}
           <div className="flex items-end justify-between relative z-10">
             <div>
-              <p className="text-xs text-white/50 uppercase tracking-widest mb-0.5">Titular</p>
+              <p className="text-xs text-white/80 uppercase tracking-widest mb-0.5">Titular</p>
               <p className="text-sm font-semibold text-white tracking-wide truncate max-w-[160px]">
                 {name || 'NOMBRE APELLIDOS'}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-white/50 uppercase tracking-widest mb-0.5">Caduca</p>
+              <p className="text-xs text-white/80 uppercase tracking-widest mb-0.5">Caduca</p>
               <p className="text-sm font-semibold text-white font-mono">
                 {expiry || 'MM/AA'}
               </p>
@@ -131,7 +131,7 @@ export function CreditCard({ number, name, expiry, cvv, flipped }: Props) {
           <div className="px-6 flex items-center gap-4">
             <div className="flex-1 h-10 bg-white/90 rounded-md" />
             <div className="text-right">
-              <p className="text-xs text-white/60 uppercase tracking-widest mb-1">CVV</p>
+              <p className="text-xs text-white/80 uppercase tracking-widest mb-1">CVV</p>
               <p className="text-white font-mono text-lg font-bold tracking-widest">
                 {cvv ? cvv.replace(/./g, '·') : '···'}
               </p>

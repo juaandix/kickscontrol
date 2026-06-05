@@ -14,62 +14,72 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       href={`/products/${product.id}`}
-      className="group flex flex-col bg-white rounded-2xl border border-neutral-200 overflow-hidden hover:shadow-lg hover:border-neutral-300 transition-all duration-200"
+      className="group flex flex-col bg-white dark:bg-neutral-800 rounded-2xl overflow-hidden border border-neutral-100 dark:border-neutral-700 hover:shadow-xl hover:shadow-neutral-200/60 dark:hover:shadow-black/40 hover:-translate-y-0.5 transition-all duration-200"
     >
       {/* Image */}
-      <div className="relative aspect-square bg-neutral-100 overflow-hidden">
+      <div className="relative aspect-[4/3] bg-neutral-50 dark:bg-neutral-900 overflow-hidden">
         {product.imageUrl ? (
           <Image
             src={product.imageUrl}
             alt={product.name}
             fill
-            className={`object-cover transition-transform duration-300 group-hover:scale-105 ${isOutOfStock ? 'opacity-60 grayscale' : ''}`}
+            className={`object-contain p-3 transition-transform duration-500 group-hover:scale-110 ${isOutOfStock ? 'opacity-40 grayscale' : ''}`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl select-none text-neutral-300">
+          <div className="w-full h-full flex items-center justify-center text-5xl select-none">
             👟
           </div>
         )}
 
+        {/* Bottom gradient for depth */}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
+
         {/* Stock badge */}
-        <div className="absolute top-2 left-2">
-          <StockBadge stock={totalStock} />
-        </div>
+        {(isOutOfStock || totalStock <= 5) && (
+          <div className="absolute top-2.5 left-2.5">
+            <StockBadge stock={totalStock} />
+          </div>
+        )}
 
         {/* Category badge */}
-        <div className="absolute top-2 right-2">
-          <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/90 backdrop-blur-sm">
+        <div className="absolute top-2.5 right-2.5">
+          <span className="rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
             {product.category}
-          </span>
-        </div>
-
-        {/* Hover overlay */}
-        <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <span className="rounded-xl bg-white/95 px-4 py-2 text-xs font-bold text-neutral-900 shadow-md backdrop-blur-sm">
-            Ver producto →
           </span>
         </div>
       </div>
 
       {/* Info */}
-      <div className="p-4 flex flex-col gap-1 flex-1">
-        <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+      <div className="p-4 flex flex-col gap-1 flex-1 bg-white dark:bg-neutral-800">
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-orange-500">
           {product.brand}
         </p>
-        <h3 className="font-semibold text-neutral-900 group-hover:text-orange-600 transition-colors line-clamp-2 leading-snug">
+        <h3 className="text-sm font-semibold text-neutral-900 dark:text-white group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors leading-snug line-clamp-2">
           {product.name}
         </h3>
-        <div className="mt-auto pt-2 flex items-center justify-between">
-          <span className="text-base font-black text-neutral-900">
-            {product.basePrice.toFixed(2)} €
-          </span>
-          {!isOutOfStock && (
-            <span className="text-xs text-neutral-400">
+        <div className="mt-auto pt-3 flex items-end justify-between">
+          <div>
+            <span className="text-xl font-black text-neutral-900 dark:text-white leading-none">
+              {product.basePrice.toFixed(2)}
+            </span>
+            <span className="text-sm font-bold text-neutral-400 dark:text-neutral-500 ml-0.5">€</span>
+          </div>
+          {!isOutOfStock ? (
+            <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 mb-0.5">
               {totalStock} uds.
             </span>
+          ) : (
+            <span className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 mb-0.5">Sin stock</span>
           )}
         </div>
+      </div>
+
+      {/* Bottom CTA strip — visible on hover */}
+      <div className="h-0 group-hover:h-9 overflow-hidden transition-all duration-200 bg-orange-500">
+        <p className="h-9 flex items-center justify-center text-xs font-bold text-white tracking-wide">
+          Ver producto →
+        </p>
       </div>
     </Link>
   )

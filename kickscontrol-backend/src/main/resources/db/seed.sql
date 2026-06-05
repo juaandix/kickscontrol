@@ -1,13 +1,13 @@
 -- ============================================================
 -- KicksControl Seed Data
--- Passwords: admin123 / user123 (BCrypt)
+-- Passwords: Admin1234! (admin/shiftleader) / User1234! (cliente)
 -- ============================================================
 
 -- Users
 INSERT INTO users (email, password, first_name, last_name, role) VALUES
-('admin@kickscontrol.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lh3y', 'Admin', 'KicksControl', 'ADMIN'),
-('shiftleader@kickscontrol.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lh3y', 'Juan', 'García', 'SHIFT_LEADER'),
-('cliente@kickscontrol.com', '$2a$10$TKh8H1.PfY4GWABzqDvVoO9MkHm.1sFl3N7eMqOXyRpMXXq5FVOW', 'María', 'López', 'USER')
+('admin@kickscontrol.com', '$2b$10$G62AXboQYftLOK/QcatEpObMzB8/SVlrB6u2afJRAhPgz.X0dT542', 'Admin', 'KicksControl', 'ADMIN'),
+('shiftleader@kickscontrol.com', '$2b$10$G62AXboQYftLOK/QcatEpObMzB8/SVlrB6u2afJRAhPgz.X0dT542', 'Juan', 'García', 'SHIFT_LEADER'),
+('cliente@kickscontrol.com', '$2b$10$0GbXQgbyqoSrov6HODsjKOf3s5w2qylzQDLvr2ZISOsFDeUOfjKjK', 'María', 'López', 'USER')
 ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================
@@ -48,7 +48,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 3. Adidas Stan Smith
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('Stan Smith', 'Adidas', 'La zapatilla de tenis más famosa del mundo. Piel suave, diseño limpio y tres franjas icónicas.', 'UNISEX', 'Lifestyle', 99.99, 'https://upload.wikimedia.org/wikipedia/commons/0/03/Stan_Smith_white_and_green.png')
+('Stan Smith', 'Adidas', 'La zapatilla de tenis más famosa del mundo. Piel suave, diseño limpio y tres franjas icónicas.', 'UNISEX', 'Lifestyle', 99.99, 'https://m.media-amazon.com/images/I/61NgvjBmCuL._SX700_.jpg')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -63,7 +63,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 4. Adidas Superstar
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('Superstar', 'Adidas', 'La shelloe característica y las tres franjas. Un ícono del streetwear desde 1969.', 'UNISEX', 'Lifestyle', 89.99, 'https://upload.wikimedia.org/wikipedia/commons/5/59/Adidas_Superstar_shoes_pair.jpg')
+('Superstar', 'Adidas', 'La shelloe característica y las tres franjas. Un ícono del streetwear desde 1969.', 'UNISEX', 'Lifestyle', 89.99, 'https://m.media-amazon.com/images/I/71TjiumjVQL._SX700_.jpg')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -78,7 +78,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 5. Nike React Infinity Run FK 3
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('React Infinity Run FK 3', 'Nike', 'Diseñada para reducir lesiones. Espuma React que ofrece amortiguación y retorno de energía superiores.', 'MAN', 'Running', 159.99, 'https://upload.wikimedia.org/wikipedia/commons/5/53/Nike_Running_Shoes.jpg')
+('React Infinity Run FK 3', 'Nike', 'Diseñada para reducir lesiones. Espuma React que ofrece amortiguación y retorno de energía superiores.', 'MAN', 'Running', 159.99, 'https://static.nike.com/a/images/t_default/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/935d489c-7819-4a65-ab22-7c2c68b45a7f/AIR+ZOOM+PEGASUS+42.png')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -93,7 +93,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 6. Adidas Ultraboost 23
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('Ultraboost 23', 'Adidas', 'Tecnología Boost para el mayor retorno de energía. Upper Primeknit adaptable al pie.', 'UNISEX', 'Running', 189.99, 'https://upload.wikimedia.org/wikipedia/commons/5/5a/Adidas_Ultra_Boost_4_running_shoes.jpeg')
+('Ultraboost 23', 'Adidas', 'Tecnología Boost para el mayor retorno de energía. Upper Primeknit adaptable al pie.', 'UNISEX', 'Running', 189.99, 'https://m.media-amazon.com/images/I/71qoec+8ZwL._SX700_.jpg')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -108,7 +108,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 7. Puma Suede Classic XXI
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('Suede Classic XXI', 'Puma', 'El Suede original desde 1968. Ante suave y suela de goma vulcanizada para un look atemporal.', 'UNISEX', 'Lifestyle', 79.99, 'https://upload.wikimedia.org/wikipedia/commons/f/f3/Puma_Suede.jpg')
+('Suede Classic XXI', 'Puma', 'El Suede original desde 1968. Ante suave y suela de goma vulcanizada para un look atemporal.', 'UNISEX', 'Lifestyle', 79.99, 'https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_600,h_600/global/374915/01/sv01/fnd/PNA/fmt/png/Suede-Classic-XXI-Sneakers')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -122,7 +122,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 8. New Balance 574
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('574', 'New Balance', 'El clásico de New Balance. Absorción de impactos ENCAP y silueta chunky característica.', 'UNISEX', 'Lifestyle', 89.99, 'https://upload.wikimedia.org/wikipedia/commons/2/22/New_Balance_574.jpg')
+('574', 'New Balance', 'El clásico de New Balance. Absorción de impactos ENCAP y silueta chunky característica.', 'UNISEX', 'Lifestyle', 89.99, 'https://m.media-amazon.com/images/I/719Q57Jt0YL._SX700_.jpg')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -152,7 +152,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 10. Converse Chuck Taylor All Star
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('Chuck Taylor All Star Hi', 'Converse', 'La bota de baloncesto más vendida de la historia. Lona resistente y puntera de goma vulcanizada.', 'UNISEX', 'Lifestyle', 69.99, 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Black_Converse_sneakers.JPG')
+('Chuck Taylor All Star Hi', 'Converse', 'La bota de baloncesto más vendida de la historia. Lona resistente y puntera de goma vulcanizada.', 'UNISEX', 'Lifestyle', 69.99, 'https://m.media-amazon.com/images/I/71OVN8P6ojL._SX700_.jpg')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -169,7 +169,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 11. Vans Old Skool
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('Old Skool', 'Vans', 'El primer modelo con la firma lateral de Vans. Loneta y ante con suela vulcanizada WaffleCup.', 'UNISEX', 'Skateboarding', 74.99, 'https://upload.wikimedia.org/wikipedia/commons/4/4d/Vans_Old_Skool_Nautical_Blue.gif')
+('Old Skool', 'Vans', 'El primer modelo con la firma lateral de Vans. Loneta y ante con suela vulcanizada WaffleCup.', 'UNISEX', 'Skateboarding', 74.99, 'https://m.media-amazon.com/images/I/719bI9CYrKL._SX700_.jpg')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -184,7 +184,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 12. Nike Free Run 5.0
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('Free Run 5.0', 'Nike', 'Movimiento natural del pie. Upper de malla transpirable y suela segmentada para máxima flexibilidad.', 'WOMAN', 'Running', 99.99, 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Nike_Free%2B_3_running_shoe.jpg')
+('Free Run 5.0', 'Nike', 'Movimiento natural del pie. Upper de malla transpirable y suela segmentada para máxima flexibilidad.', 'WOMAN', 'Running', 99.99, 'https://static.nike.com/a/images/t_default/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/fda0adce-294b-462a-b016-6d90d8c76144/W+NIKE+FREE+2025.png')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -198,7 +198,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 13. Adidas Gazelle
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('Gazelle', 'Adidas', 'Ante suave y silueta slim. Diseño clásico de los 60 con modernos detalles dorados.', 'UNISEX', 'Lifestyle', 99.99, 'https://upload.wikimedia.org/wikipedia/commons/1/19/Adidas_Gazelle.jpg')
+('Gazelle', 'Adidas', 'Ante suave y silueta slim. Diseño clásico de los 60 con modernos detalles dorados.', 'UNISEX', 'Lifestyle', 99.99, 'https://m.media-amazon.com/images/I/51GJdFYhm6L._AC_SL1000_.jpg')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -212,7 +212,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 14. New Balance 2002R
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('2002R', 'New Balance', 'Tecnología ABZORB para la mejor amortiguación. Capas de malla y ante para un perfil premium.', 'UNISEX', 'Lifestyle', 149.99, 'https://upload.wikimedia.org/wikipedia/commons/8/83/New_Balance_2002R.jpg')
+('2002R', 'New Balance', 'Tecnología ABZORB para la mejor amortiguación. Capas de malla y ante para un perfil premium.', 'UNISEX', 'Lifestyle', 149.99, 'https://m.media-amazon.com/images/I/71vfZeTKYGL._AC_SL1500_.jpg')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES
@@ -226,7 +226,7 @@ ON CONFLICT (sku) DO NOTHING;
 
 -- 15. Puma RS-X
 INSERT INTO products (name, brand, description, gender, category, base_price, image_url) VALUES
-('RS-X3', 'Puma', 'Diseño futurista Running System con espuma RS y entresuela gruesa para máximo amortiguamiento.', 'UNISEX', 'Lifestyle', 109.99, 'https://upload.wikimedia.org/wikipedia/commons/8/88/Puma_Clyde_leather_blue.jpg')
+('RS-X3', 'Puma', 'Diseño futurista Running System con espuma RS y entresuela gruesa para máximo amortiguamiento.', 'UNISEX', 'Lifestyle', 109.99, 'https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_600,h_600/global/371570/05/sv01/fnd/PNA/fmt/png/RS-X-Puzzle-Men%27s-Sneakers')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO product_variants (product_id, size, color, sku, stock_quantity, price_modifier) VALUES

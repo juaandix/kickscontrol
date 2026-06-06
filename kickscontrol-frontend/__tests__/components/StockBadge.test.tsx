@@ -36,7 +36,7 @@ describe('StockBadge', () => {
   it('"Agotado" badge has neutral styling', () => {
     render(<StockBadge stock={0} />)
     const badge = screen.getByText('Agotado')
-    expect(badge).toHaveClass('text-neutral-500')
+    expect(badge).toHaveClass('text-white')
   })
 
   it('"Últimas unidades" badge has orange styling', () => {

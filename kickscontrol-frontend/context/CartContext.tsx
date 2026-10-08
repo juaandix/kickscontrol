@@ -36,7 +36,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     queryKey: ['cart'],
     queryFn: fetchCart,
     enabled: isAuthenticated,
-    initialData: { items: [], totalItems: 0, totalAmount: 0 },
+    placeholderData: { items: [], totalItems: 0, totalAmount: 0 },
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['cart'] })

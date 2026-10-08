@@ -16,6 +16,8 @@ public interface ProductService {
                                      BigDecimal minPrice, BigDecimal maxPrice,
                                      String size, Boolean inStock, Pageable pageable);
 
+    List<ProductResponseDto> findAllWithVariants();
+
     ProductResponseDto findById(Long id);
 
     List<String> findBrands();

@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,18 @@ public class ProductServiceImpl implements ProductService {
         );
         return productRepository.findAll(spec, pageable)
                 .map(ProductResponseDto::summary);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponseDto> findAllWithVariants() {
+        // Vista de inventario: necesita las variantes completas, no el resumen del catálogo
+        Specification<Product> spec = ProductSpecification.withFilters(
+                null, null, null, null, null, null, null, null
+        );
+        return productRepository.findAll(spec, Sort.by("id")).stream()
+                .map(ProductResponseDto::from)
+                .toList();
     }
 
     @Override

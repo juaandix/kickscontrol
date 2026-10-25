@@ -1,27 +1,32 @@
 import { Suspense } from 'react'
-import { HeroSection } from '@/components/catalog/HeroSection'
+import { HomeHero } from '@/components/catalog/HomeHero'
+import { NewArrivals } from '@/components/catalog/NewArrivals'
+import { CategoryTiles } from '@/components/catalog/CategoryTiles'
 import { FilterPanel } from '@/components/catalog/FilterPanel'
 import { ProductGrid } from '@/components/catalog/ProductGrid'
 
-export const metadata = { title: 'KicksControl — Tu tienda de zapatillas' }
+export const metadata = { title: 'KicksControl — Zapatillas con stock real por talla' }
 
 export default function CatalogPage() {
   return (
-    <div className="space-y-10">
-      <HeroSection />
+    <div>
+      <HomeHero />
+      <NewArrivals />
+      <CategoryTiles />
 
-      <div id="catalog" className="flex flex-col lg:flex-row gap-8 scroll-mt-20">
-        <div className="lg:w-56 shrink-0">
+      <section id="catalog" aria-labelledby="catalog-title" className="scroll-mt-20 pt-20">
+        <h2 id="catalog-title" className="type-section pb-5">Todas las zapatillas</h2>
+        <div className="sticky top-16 z-20 -mx-4 bg-paper px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
           <Suspense>
             <FilterPanel />
           </Suspense>
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="pt-4">
           <Suspense>
             <ProductGrid />
           </Suspense>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

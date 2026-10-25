@@ -47,23 +47,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+    <div className="sheet min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <span className="text-3xl font-black tracking-tight text-neutral-900">
-            kicks<span className="text-orange-500">control</span>
-          </span>
-          <p className="text-neutral-500 text-sm mt-1">Crea tu cuenta gratis</p>
+          <Link href="/" className="type-style text-[2.75rem]">KicksControl</Link>
+          <p className="text-ink-soft text-sm mt-1">Crea tu cuenta gratis</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-2xl border border-neutral-200 p-6 space-y-4"
+          className="border-t border-form p-6 space-y-4"
         >
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label htmlFor="firstName" className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">
+              <label htmlFor="firstName" className="type-field">
                 Nombre
               </label>
               <input
@@ -73,11 +71,11 @@ export default function RegisterPage() {
                 value={form.firstName}
                 onChange={set('firstName')}
                 placeholder="Juan"
-                className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className="w-full border border-form-rule px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:ring-2 focus:ring-form"
               />
             </div>
             <div className="space-y-1">
-              <label htmlFor="lastName" className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">
+              <label htmlFor="lastName" className="type-field">
                 Apellido
               </label>
               <input
@@ -87,13 +85,13 @@ export default function RegisterPage() {
                 value={form.lastName}
                 onChange={set('lastName')}
                 placeholder="García"
-                className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className="w-full border border-form-rule px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:ring-2 focus:ring-form"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="email" className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">
+            <label htmlFor="email" className="type-field">
               Email
             </label>
             <input
@@ -103,12 +101,12 @@ export default function RegisterPage() {
               value={form.email}
               onChange={set('email')}
               placeholder="tu@email.com"
-              className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full border border-form-rule px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:ring-2 focus:ring-form"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="password" className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">
+            <label htmlFor="password" className="type-field">
               Contraseña
             </label>
             <input
@@ -118,12 +116,12 @@ export default function RegisterPage() {
               value={form.password}
               onChange={set('password')}
               placeholder="Mínimo 8 caracteres"
-              className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full border border-form-rule px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:ring-2 focus:ring-form"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="confirm" className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">
+            <label htmlFor="confirm" className="type-field">
               Confirmar contraseña
             </label>
             <input
@@ -133,26 +131,26 @@ export default function RegisterPage() {
               value={form.confirm}
               onChange={set('confirm')}
               placeholder="Repite tu contraseña"
-              className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full border border-form-rule px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:ring-2 focus:ring-form"
             />
           </div>
 
           {error && (
-            <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-xs text-alarm bg-transparent px-3 py-2">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold text-sm rounded-xl py-2.5 transition-colors"
+            className="w-full bg-ink hover:bg-form-deep disabled:opacity-60 text-paper font-bold text-sm py-2.5 transition-colors"
           >
             {loading ? 'Creando cuenta…' : 'Crear cuenta'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-neutral-500 mt-4">
+        <p className="text-center text-sm text-ink-soft mt-4">
           ¿Ya tienes cuenta?{' '}
-          <Link href="/login" className="text-orange-500 font-semibold hover:underline">
+          <Link href="/login" className="text-form font-semibold hover:underline">
             Inicia sesión
           </Link>
         </p>

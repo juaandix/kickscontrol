@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ProductDetailClient } from '@/components/catalog/ProductDetailClient'
+import { formatPrice } from '@/lib/sheet'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8081'
 
@@ -29,7 +30,7 @@ export async function generateMetadata(
   const title = `${product.name} · ${product.brand} — KicksControl`
   const description = product.description
     ? `${product.description.slice(0, 150)}${product.description.length > 150 ? '…' : ''}`
-    : `${product.name} de ${product.brand}. ${product.category} · ${product.basePrice.toFixed(2)} €`
+    : `${product.name} de ${product.brand}. ${product.category} · ${formatPrice(product.basePrice)}`
 
   return {
     title,

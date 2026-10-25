@@ -1,23 +1,19 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { categoryHref } from '@/lib/categories'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { ArrowLeftIcon } from '@heroicons/react/20/solid'
+import { FloatingShoe } from '@/components/motion/FloatingShoe'
 import { fetchProduct } from '@/lib/products'
-import { StockBadge } from '@/components/ui/StockBadge'
-import { useCart } from '@/context/CartContext'
-import type { ProductVariant } from '@/types'
+import { StyleOrder } from './StyleOrder'
 
 interface Props {
   id: number
 }
 
+/** A style's own page: the full entry of the sheet, at the size the photo deserves. */
 export function ProductDetailClient({ id }: Props) {
-  const router = useRouter()
-  const { addItem } = useCart()
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
-  const [adding, setAdding] = useState(false)
-
   const { data: product, isLoading, isError } = useQuery({
     queryKey: ['product', id],
     queryFn: () => fetchProduct(id),
@@ -25,148 +21,63 @@ export function ProductDetailClient({ id }: Props) {
 
   if (isLoading) {
     return (
-      <div className="grid md:grid-cols-2 gap-10 animate-pulse">
-        <div className="aspect-square bg-neutral-200 dark:bg-neutral-700 rounded-2xl" />
-        <div className="space-y-4">
-          <div className="h-6 bg-neutral-200 dark:bg-neutral-700 rounded w-1/3" />
-          <div className="h-8 bg-neutral-200 dark:bg-neutral-700 rounded w-2/3" />
-          <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-full" />
-          <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-3/4" />
+      <div className="grid gap-8 py-8 lg:grid-cols-12" aria-busy>
+        <div className="aspect-square bg-paper-deep lg:col-span-6" />
+        <div className="space-y-4 lg:col-span-6">
+          <div className="h-12 bg-paper-deep" />
+          <div className="h-28 w-2/3 bg-paper-deep" />
+          <div className="h-36 bg-paper-deep" />
         </div>
       </div>
     )
   }
 
   if (isError || !product) {
-    return <div className="py-16 text-center text-neutral-500 dark:text-neutral-400">Producto no encontrado.</div>
+    return (
+      <div className="py-20">
+        <p className="type-style text-5xl">Modelo no encontrado</p>
+        <p className="mt-2 text-ink-soft">Puede que se haya retirado del catálogo.</p>
+        <Link href="/#catalog" className="mt-6 inline-block font-semibold text-form underline">Volver al catálogo</Link>
+      </div>
+    )
   }
 
-  const activeVariants = product.variants.filter(v => v.isActive)
-  const colors = [...new Set(activeVariants.map(v => v.color))]
-  const sizes = [...new Set(activeVariants.map(v => v.size))].sort((a, b) => Number(a) - Number(b))
-
-  const getVariant = (size: string, color: string) =>
-    activeVariants.find(v => v.size === size && v.color === color) ?? null
-
-  const currentColor = selectedVariant?.color ?? colors[0]
-  const currentSize = selectedVariant?.size ?? null
-
-  const handleSizeClick = (size: string) => setSelectedVariant(getVariant(size, currentColor))
-  const handleColorClick = (color: string) =>
-    setSelectedVariant(currentSize ? getVariant(currentSize, color) : null)
-
-  const effectiveVariant = selectedVariant ?? getVariant(currentSize ?? '', currentColor)
-  const finalPrice = product.basePrice + (selectedVariant?.priceModifier ?? 0)
-
   return (
-    <div>
-      <button
-        onClick={() => router.back()}
-        className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 mb-6 flex items-center gap-1"
-      >
-        ← Volver al catálogo
-      </button>
+    <article className="pb-8">
+      <nav aria-label="Ruta" className="flex items-center gap-2 py-4 text-xs text-ink-soft">
+        <Link href="/#catalog" className="inline-flex items-center gap-1 hover:text-ink">
+          <ArrowLeftIcon className="size-3.5" /> Catálogo
+        </Link>
+        <span>/</span>
+        <Link href={categoryHref(product.category)} className="hover:text-ink">{product.category}</Link>
+      </nav>
 
-      <div className="grid md:grid-cols-2 gap-10">
-        {/* Image */}
-        <div className="aspect-square rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-8xl overflow-hidden">
-          {product.imageUrl
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-            : '👟'}
+      <div className="grid gap-x-12 gap-y-8 lg:grid-cols-12">
+        <div className="lg:sticky lg:top-24 lg:col-span-7 lg:self-start">
+          {product.imageUrl && (
+            <FloatingShoe
+              src={product.imageUrl}
+              alt={product.name}
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              transitionName={`shoe-${product.id}`}
+              className="aspect-square [--shadow-y:22%]"
+              imageClassName="p-8 lg:p-14"
+            />
+          )}
         </div>
 
-        {/* Details */}
-        <div className="space-y-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">{product.brand}</p>
-            <h1 className="text-3xl font-black text-neutral-900 dark:text-white mt-1 leading-tight">{product.name}</h1>
-            <p className="text-4xl font-black text-neutral-900 dark:text-white mt-3">
-              {finalPrice.toFixed(2)} <span className="text-2xl font-bold text-neutral-500 dark:text-neutral-400">€</span>
-            </p>
-          </div>
+        <div className="lg:col-span-5 lg:pt-4">
+          <StyleOrder product={product} as="h1" />
 
           {product.description && (
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">{product.description}</p>
-          )}
-
-          {/* Color selector */}
-          <div>
-            <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-2">
-              Color: <span className="font-normal text-neutral-500 dark:text-neutral-400">{currentColor}</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {colors.map(color => (
-                <button key={color} onClick={() => handleColorClick(color)}
-                  className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
-                    color === currentColor
-                      ? 'border-orange-500 bg-orange-500 text-white shadow-sm'
-                      : 'border-neutral-300 dark:border-neutral-600 hover:border-neutral-500 text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800'
-                  }`}>
-                  {color}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Size selector */}
-          <div>
-            <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mb-2">
-              Talla (EU)
-              {currentSize && <span className="font-normal text-neutral-500 dark:text-neutral-400 ml-1">— {currentSize}</span>}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {sizes.map(size => {
-                const variant = getVariant(size, currentColor)
-                const hasStock = (variant?.stockQuantity ?? 0) > 0
-                const isSelected = currentSize === size
-                return (
-                  <button key={size} onClick={() => handleSizeClick(size)}
-                    disabled={!variant || !hasStock}
-                    className={`relative w-13 h-13 min-w-[52px] min-h-[52px] rounded-xl border text-sm font-bold transition-all ${
-                      isSelected
-                        ? 'border-orange-500 bg-orange-500 text-white shadow-md scale-105'
-                        : hasStock
-                          ? 'border-neutral-300 dark:border-neutral-600 hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950 text-neutral-900 dark:text-white bg-white dark:bg-neutral-800'
-                          : 'border-neutral-200 dark:border-neutral-700 text-neutral-400 dark:text-neutral-600 bg-neutral-50 dark:bg-neutral-900 cursor-not-allowed opacity-50'
-                    }`}>
-                    {size}
-                    {!hasStock && variant && (
-                      <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="block w-full h-px bg-neutral-400 rotate-45 opacity-60" />
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {effectiveVariant && (
-            <div className="flex items-center gap-2">
-              <StockBadge stock={effectiveVariant.stockQuantity} />
-              {effectiveVariant.stockQuantity > 0 && (
-                <span className="text-xs font-medium text-neutral-600 dark:text-neutral-300">{effectiveVariant.stockQuantity} disponibles</span>
-              )}
+            <div className="mt-10 border-t border-form-rule pt-5">
+              <p className="mb-2 text-sm font-semibold">Descripción</p>
+              <p className="max-w-[65ch] text-sm leading-relaxed text-ink-soft">{product.description}</p>
             </div>
           )}
-
-          <button
-            disabled={!selectedVariant || selectedVariant.stockQuantity === 0 || adding}
-            onClick={async () => {
-              if (!selectedVariant) return
-              setAdding(true)
-              try { await addItem(selectedVariant.id, 1) } finally { setAdding(false) }
-            }}
-            className="w-full py-4 rounded-xl font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:bg-neutral-300 dark:disabled:bg-neutral-700 disabled:cursor-not-allowed transition-colors"
-          >
-            {adding ? 'Añadiendo...'
-              : !selectedVariant ? 'Selecciona una talla'
-              : selectedVariant.stockQuantity === 0 ? 'Sin stock'
-              : 'Añadir al carrito'}
-          </button>
         </div>
       </div>
-    </div>
+    </article>
   )
 }

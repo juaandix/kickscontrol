@@ -32,11 +32,11 @@ interface Props {
 export function OrderTimeline({ status }: Props) {
   if (status === 'CANCELLED') {
     return (
-      <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
-        <XCircleIcon className="w-6 h-6 text-red-500 shrink-0" />
+      <div className="flex items-center gap-3 bg-transparent border border-alarm px-5 py-4">
+        <XCircleIcon className="w-6 h-6 text-alarm shrink-0" />
         <div>
-          <p className="font-bold text-red-700">Pedido cancelado</p>
-          <p className="text-xs text-red-500 mt-0.5">Este pedido fue cancelado y no se procesará.</p>
+          <p className="font-bold text-alarm">Pedido cancelado</p>
+          <p className="text-xs text-alarm mt-0.5">Este pedido fue cancelado y no se procesará.</p>
         </div>
       </div>
     )
@@ -45,14 +45,14 @@ export function OrderTimeline({ status }: Props) {
   const currentIdx = STATUS_ORDER[status] ?? 0
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 px-5 py-5">
-      <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-5">Estado del pedido</p>
+    <div className="border-t border-form px-5 py-5">
+      <p className="type-fieldst mb-5">Estado del pedido</p>
 
       <div className="relative flex items-start">
         {/* Progress bar */}
-        <div className="absolute top-4 left-0 right-0 h-0.5 bg-neutral-200 mx-8" aria-hidden>
+        <div className="absolute top-4 left-0 right-0 h-0.5 bg-paper-deep mx-8" aria-hidden>
           <div
-            className="h-full bg-orange-500 transition-all duration-500"
+            className="h-full bg-ink transition-all duration-500"
             style={{ width: currentIdx === 0 ? '0%' : `${(currentIdx / (STEPS.length - 1)) * 100}%` }}
           />
         </div>
@@ -66,13 +66,13 @@ export function OrderTimeline({ status }: Props) {
             <div key={step.status} className="relative flex flex-col items-center flex-1 gap-2">
               {/* Circle */}
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center z-10 transition-colors ${
-                  done
-                    ? 'bg-orange-500 text-white'
-                    : active
-                      ? 'bg-white border-2 border-orange-500 text-orange-500'
-                      : 'bg-white border-2 border-neutral-200 text-neutral-300'
-                }`}
+                className={`w-8 h-8 flex items-center justify-center z-10 transition-colors ${
+ done
+ ? 'bg-ink text-paper'
+ : active
+ ? 'bg-transparent border-2 border-form text-form'
+ : 'bg-transparent border-2 border-form-rule text-ink-soft/50'
+ }`}
               >
                 {done
                   ? <CheckCircleSolid className="w-5 h-5" />
@@ -82,8 +82,8 @@ export function OrderTimeline({ status }: Props) {
               {/* Label */}
               <span
                 className={`text-xs font-semibold text-center leading-tight ${
-                  active ? 'text-orange-600' : done ? 'text-neutral-700' : 'text-neutral-400'
-                }`}
+ active ? 'text-form' : done ? 'text-ink-soft' : 'text-ink-soft'
+ }`}
               >
                 {step.label}
               </span>

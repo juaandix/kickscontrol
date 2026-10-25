@@ -1,27 +1,434 @@
 @import "tailwindcss";
 
+/* Store world: the premium sneaker-store standard (Kith, SVD as the bar).
+   White ground, black type, light-grey product tiles, one red for last units. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #ffffff;
+  --paper-deep: #f2f2f2;
+  --ink: #111111;
+  --ink-soft: #6b6b6b;
+  --form: #111111;
+  --form-deep: #3a3a3a;
+  --form-rule: #e6e6e6;
+  --form-wash: #f5f5f5;
+  --alarm: #d4291f;
+  --tile: #f4f4f4;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-form: var(--form);
+  --color-form-deep: var(--form-deep);
+  --color-form-rule: var(--form-rule);
+  --color-form-wash: var(--form-wash);
+  --color-alarm: var(--alarm);
+  --font-sheet: var(--font-archivo);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── Sheet scope: everything customer-facing ───────────────────────── */
+.sheet {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color-scheme: light;
+  caret-color: var(--form);
+  scrollbar-color: var(--form-rule) var(--paper);
+}
+
+.sheet ::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.sheet :focus-visible {
+  outline: 2px solid var(--form);
+  outline-offset: 2px;
+}
+
+.sheet a {
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+
+/* Style names and headlines: the line sheet's extra-condensed heavy cut */
+.type-style {
+  font-stretch: 62.5%;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+/* Printed field label: small form-blue caps */
+.type-field {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* Section heads, the way SVD sets "NOVEDADES EN CALZADO" */
+.type-section {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+/* Product names and the hero: bold, normal width, sentence case */
+.type-name {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+/* Product photos sit on the paper like a printed halftone, not in a white box */
+.on-paper {
+  mix-blend-mode: darken;
+}
+
+/* Product photos arrive on white; on the dark sheet they sit in a light showcase tile */
+.tile {
+  background: var(--tile);
+}
+
+/* Signature: a marked cell floods with form ink from the left */
+@keyframes ink-fill {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+.ink-mark {
+  position: absolute;
+  inset: 0;
+  background: var(--form);
+  animation: ink-fill 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-mark { animation: none; }
+}
+
+/* ══ Depth & motion layer ═════════════════════════════════════════════
+   White sheets lifted off a gridded desk; the sheet prints itself on load. */
+:root {
+  --sheet: #ffffff;
+  --lift-1: none;
+  --lift-2: 0 18px 40px -24px rgba(17, 17, 17, 0.25);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@theme inline {
+  --color-sheet: var(--sheet);
+}
+
+/* A sheet lifted off the desk */
+.raised {
+  background: var(--sheet);
+  box-shadow: var(--lift-1);
+}
+
+/* Frosted masthead over the desk */
+.glass {
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* ── Load sequence: the sheet prints ── */
+.line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+  margin-bottom: -0.06em;
+}
+.line-mask > span {
+  display: block;
+  animation: rise 800ms var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes rise {
+  from { transform: translateY(105%); }
+  to   { transform: translateY(0); }
+}
+
+/* A rule that draws itself left to right (replaces a border-bottom) */
+.rule-draw { position: relative; }
+.rule-draw::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--form);
+  transform-origin: left;
+  animation: draw 1100ms var(--ease-out) var(--d, 150ms) both;
+}
+@keyframes draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.fade-up {
+  animation: fade-up 700ms var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── The floating shoe ── */
+.shoe-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--tile);
+}
+.shoe-enter {
+  position: absolute;
+  inset: 0;
+  animation: shoe-enter 1000ms var(--ease-out) 200ms both;
+}
+@keyframes shoe-enter {
+  from { opacity: 0; transform: translateY(28px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+.shoe-float {
+  position: absolute;
+  inset: 0;
+  background: var(--tile);
+  animation: float 6s ease-in-out 1.2s infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+.shoe-shadow {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: var(--shadow-y, 9%);
+  height: 7%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(17, 17, 17, 0.22), transparent);
+  mix-blend-mode: multiply;
+  animation: shadow-breathe 6s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+@keyframes shadow-breathe {
+  0%, 100% { transform: scaleX(1); opacity: 1; }
+  50%      { transform: scaleX(0.82); opacity: 0.6; }
+}
+
+/* ── Cursor tilt ── */
+.tilt {
+  transform: perspective(1000px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
+  transition: transform 600ms var(--ease-out), box-shadow 300ms var(--ease-out);
+}
+.tilt[data-active] {
+  transition-duration: 120ms, 300ms;
+  will-change: transform;
+}
+
+/* Catalog cell lifts off its sheet */
+.cell-lift {
+  position: relative;
+  transition: box-shadow 300ms var(--ease-out), transform 600ms var(--ease-out);
+}
+.cell-lift:hover {
+  z-index: 2;
+  box-shadow: var(--lift-2);
+}
+.cell-lift .cell-shoe {
+  transition: transform 500ms var(--ease-out);
+}
+.cell-lift:hover .cell-shoe {
+  transform: translateY(-8px) scale(1.05);
+}
+
+/* Category tile: the shoe pushes forward on hover */
+.tile-zoom img {
+  transition: transform 900ms var(--ease-out);
+}
+.tile-zoom:hover img {
+  transform: scale(1.06);
+}
+
+/* Product card: sizes in stock slide up over the price on hover */
+.card-sizes {
+  transition: opacity 250ms var(--ease-out), transform 350ms var(--ease-out);
+}
+@media (hover: hover) {
+  .card-sizes { opacity: 0; transform: translateY(6px); }
+  .group:hover .card-sizes,
+  .group:focus-visible .card-sizes { opacity: 1; transform: none; }
+  .group:hover .card-price { opacity: 0; }
+}
+.card-price { transition: opacity 200ms var(--ease-out); }
+@media (hover: none) {
+  .card-sizes { display: none; }
+}
+
+/* ── Scroll: cells and headings arrive as they enter ── */
+@supports (animation-timeline: view()) {
+  .scroll-in {
+    animation: scroll-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 25%;
+  }
+  @keyframes scroll-in {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+/* ── Feedback ── */
+.bump { display: inline-block; animation: bump 420ms var(--ease-out); }
+@keyframes bump {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.sheen { position: relative; overflow: hidden; isolation: isolate; }
+.sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--form-deep);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 260ms var(--ease-out);
+}
+/* The order action floods with form ink, like a marked cell */
+.sheen:hover:not(:disabled)::after { clip-path: inset(0 0 0 0); }
+
+.matrix-row {
+  animation: fade-up 600ms var(--ease-out) var(--d, 0ms) both;
+}
+
+/* Cart slip slides in over a fading desk, and leaves the way it came (faster) */
+.drawer-in { animation: drawer-in 340ms var(--ease-drawer) both; }
+.drawer-out { animation: drawer-out 240ms var(--ease-drawer) both; }
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
+.overlay-in { animation: overlay-in 300ms var(--ease-out) both; }
+.overlay-out { animation: overlay-out 240ms var(--ease-out) both; }
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Exits need their own keyframes: flipping direction on a finished animation neither replays it nor fires animationend */
+@keyframes drawer-out { to { transform: translateX(100%); } }
+@keyframes overlay-out { to { opacity: 0; } }
+
+/* Press: the button gives under the finger */
+.press {
+  transition-property: transform, color, background-color, border-color;
+  transition-duration: 120ms, 150ms, 150ms, 150ms;
+  transition-timing-function: var(--ease-out);
+}
+.press:active:not(:disabled) { transform: scale(0.97); }
+
+/* Catalog results: the old grid dims while the next one loads, then cards arrive in a stagger */
+.grid-busy {
+  opacity: 0.45;
+  transition: opacity 200ms var(--ease-out);
+}
+.grid-idle {
+  transition: opacity 200ms var(--ease-out);
+}
+.card-in { animation: fade-up 420ms var(--ease-out) var(--d, 0ms) both; }
+
+/* Running page: distance bar filling with page scroll, a marathon from top to bottom */
+.run-progress { transform: scaleX(0); }
+@supports (animation-timeline: scroll()) {
+  .run-progress { animation: run-progress linear both; animation-timeline: scroll(root); }
+  @keyframes run-progress { to { transform: scaleX(1); } }
+}
+
+/* A button's label swapping to its confirmation */
+.label-in { animation: label-in 220ms var(--ease-out) both; }
+@keyframes label-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.slip-line { animation: fade-up 500ms var(--ease-out) var(--d, 0ms) both; }
+
+/* ── Catalog → product: the shoe morphs across the page change ── */
+::view-transition-group(.morph) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Page change: the masthead stays put; old content fades out fast, new content rises in */
+::view-transition-group(site-header) { animation: none; z-index: 100; }
+::view-transition-old(site-header) { display: none; }
+::view-transition-new(site-header) { animation: none; }
+
+::view-transition-old(root) {
+  animation: 140ms var(--ease-out) both vt-fade-out;
+}
+::view-transition-new(root) {
+  animation: 240ms var(--ease-out) 60ms both vt-rise-in;
+}
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Filtering stays on the same page: no whole-page crossfade, the grid handles it */
+html:active-view-transition-type(filter)::view-transition-old(root),
+html:active-view-transition-type(filter)::view-transition-new(root) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line-mask > span,
+  .rule-draw::after,
+  .fade-up,
+  .shoe-enter,
+  .shoe-float,
+  .shoe-shadow,
+  .scroll-in,
+  .matrix-row,
+  .slip-line,
+  .drawer-in,
+  .card-in,
+  .label-in {
+    animation: none !important;
+  }
+  /* Closing still needs animationend to unmount: make it instant, not absent */
+  .drawer-out,
+  .overlay-out { animation-duration: 1ms !important; }
+  .press:active:not(:disabled) { transform: none; }
+  .tilt { transform: none !important; }
+  .tile-zoom:hover img { transform: none; }
+  .cell-lift:hover .cell-shoe { transform: none; }
+  .bump { animation-duration: 1ms; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
+/* Decorative background video: never show the browser's centred play button (Safari low-power mode) */
+.bg-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
 }

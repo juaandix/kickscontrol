@@ -3,12 +3,12 @@ import { Footer } from '@/components/layout/Footer'
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div className="sheet flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 pt-4 pb-16 sm:px-6 lg:px-10">
         {children}
       </main>
       <Footer />
-    </>
+    </div>
   )
 }

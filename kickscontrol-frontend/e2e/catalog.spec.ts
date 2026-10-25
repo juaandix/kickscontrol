@@ -7,15 +7,15 @@ test.describe('Catalog', () => {
   })
 
   test('hero section is visible', async ({ page }) => {
-    await expect(page.locator('text=Las mejores zapatillas')).toBeVisible()
-    await expect(page.locator('text=Ver catálogo')).toBeVisible()
+    await expect(page.locator('#hero-title')).toBeVisible()
+    await expect(page.locator('text=Ver colección')).toBeVisible()
   })
 
   test('category pills are visible and link to filtered catalog', async ({ page }) => {
     const runningLink = page.locator('a', { hasText: 'Running' }).first()
     await expect(runningLink).toBeVisible()
     await runningLink.click()
-    await expect(page).toHaveURL(/category=RUNNING/)
+    await expect(page).toHaveURL(/\/categoria\/running/)
   })
 
   test('products grid loads', async ({ page }) => {
@@ -41,6 +41,7 @@ test.describe('Catalog', () => {
   })
 
   test('brand filter chip works', async ({ page }) => {
+    await page.locator('button', { hasText: 'Marca' }).first().click()
     const brandChips = page.locator('button', { hasText: 'Adidas' })
     if (await brandChips.count() > 0) {
       await brandChips.first().click()

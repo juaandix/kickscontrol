@@ -1,85 +1,104 @@
 'use client'
 
 import Link from 'next/link'
+import { categoryHref } from '@/lib/categories'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 import { CartDrawer } from '@/components/cart/CartDrawer'
-import { ShoppingCartIcon, UserIcon, ArrowRightEndOnRectangleIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, ShoppingBagIcon, UserIcon, ArrowRightStartOnRectangleIcon } from '@heroicons/react/24/outline'
 
-export function Header() {
-  const { isAuthenticated, user, logout } = useAuth()
-  const { totalItems, openCart } = useCart()
-  const cartCount = totalItems
+const CATEGORIES = ['Running', 'Basketball', 'Lifestyle', 'Skateboarding']
+
+/** Search lives in the header, as on the reference stores; it filters the catalog on the home page. */
+function HeaderSearch() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [value, setValue] = useState(searchParams.get('search') ?? '')
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = value.trim()
+    router.push(q ? `/?search=${encodeURIComponent(q)}#catalog` : '/#catalog')
+  }
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <form role="search" onSubmit={submit} className="relative hidden md:block">
+      <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-0 size-4 -translate-y-1/2" />
+      <input
+        type="search"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        placeholder="Buscar en KicksControl"
+        aria-label="Buscar zapatillas"
+        className="w-56 border-b border-ink bg-transparent py-1.5 pl-6 text-sm placeholder:text-ink-soft focus:outline-none lg:w-64"
+      />
+    </form>
+  )
+}
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-black tracking-tight text-neutral-900 dark:text-white">
-              KICKS<span className="text-orange-500">CONTROL</span>
-            </span>
+export function Header() {
+  const pathname = usePathname()
+  const { isAuthenticated, user, logout } = useAuth()
+  const { totalItems, openCart } = useCart()
+  const isStaff = isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'SHIFT_LEADER')
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 border-b border-form-rule bg-paper" style={{ viewTransitionName: 'site-header' }}>
+        <div className="mx-auto flex h-16 max-w-[90rem] items-center gap-8 px-4 sm:px-6 lg:px-10">
+          <Link href="/" className="shrink-0 text-[1.375rem] font-extrabold tracking-[-0.04em]">
+            KICKSCONTROL
           </Link>
 
-          {/* Actions */}
-          <div className="flex items-center gap-4">
-            {isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'SHIFT_LEADER') && (
-              <Link
-                href="/backoffice"
-                className="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-orange-500 hover:text-orange-400"
-              >
-                Backoffice
+          <nav aria-label="Categorías" className="hidden items-center gap-6 text-sm font-medium lg:flex">
+            {CATEGORIES.map(cat => (
+              <Link key={cat} href={categoryHref(cat)} aria-current={pathname === categoryHref(cat) ? 'page' : undefined} className="underline-offset-4 hover:underline aria-[current=page]:underline">
+                {cat}
               </Link>
-            )}
+            ))}
+            {isStaff && <Link href="/backoffice" className="text-ink-soft hover:text-ink">Backoffice</Link>}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-1 sm:gap-3">
+            <Suspense><HeaderSearch /></Suspense>
 
             {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-black">
-                    {user?.firstName?.[0]?.toUpperCase()}
-                  </div>
-                  <span className="hidden sm:block text-sm font-medium text-neutral-700 dark:text-neutral-200">
-                    {user?.firstName}
-                  </span>
+              <>
+                <Link href="/profile" className="hidden px-2 py-2 text-sm font-medium underline-offset-4 hover:underline sm:inline">
+                  {user?.firstName}
                 </Link>
-                <button
-                  onClick={logout}
-                  className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
-                  title="Cerrar sesión"
-                >
-                  <ArrowRightEndOnRectangleIcon className="w-5 h-5" />
+                <button onClick={logout} className="p-2 hover:text-ink-soft" title="Cerrar sesión" aria-label="Cerrar sesión">
+                  <ArrowRightStartOnRectangleIcon className="size-5" />
                 </button>
-              </div>
+              </>
             ) : (
-              <Link
-                href="/login"
-                className="flex items-center gap-1 text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                <UserIcon className="w-5 h-5" />
-                <span className="hidden sm:block">Entrar</span>
+              <Link href="/login" className="p-2 hover:text-ink-soft" aria-label="Entrar">
+                <UserIcon className="size-5" />
               </Link>
             )}
 
             <button
               onClick={openCart}
-              className="relative p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200"
+              className="press relative p-2 hover:text-ink-soft"
+              aria-label={`Abrir carrito, ${totalItems} ${totalItems === 1 ? 'artículo' : 'artículos'}`}
             >
-              <ShoppingCartIcon className="w-5 h-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                  {cartCount > 9 ? '9+' : cartCount}
-                </span>
-              )}
+              <ShoppingBagIcon className="size-5" />
+              <span key={totalItems} className="bump absolute -top-0.5 -right-1 text-[0.6875rem] font-bold">
+                {totalItems}
+              </span>
             </button>
           </div>
         </div>
-      </div>
+
+        <nav aria-label="Categorías" className="flex gap-5 overflow-x-auto border-t border-form-rule px-4 py-2.5 text-sm font-medium sm:px-6 lg:hidden">
+          {CATEGORIES.map(cat => (
+            <Link key={cat} href={categoryHref(cat)} aria-current={pathname === categoryHref(cat) ? 'page' : undefined} className="shrink-0 underline-offset-4 aria-[current=page]:underline">{cat}</Link>
+          ))}
+        </nav>
+      </header>
       <CartDrawer />
-    </header>
+    </>
   )
 }

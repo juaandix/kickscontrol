@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { Archivo } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 import { QueryProvider } from '@/context/QueryProvider'
 import { CartProvider } from '@/context/CartContext'
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
+const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo' })
 
 export const metadata: Metadata = {
   title: 'KicksControl',
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${geist.variable} h-full antialiased`}>
+    <html lang="es" className={`${archivo.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900">
         <QueryProvider>
           <AuthProvider>

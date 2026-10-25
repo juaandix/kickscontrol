@@ -32,41 +32,39 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+    <div className="sheet min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <span className="text-3xl font-black tracking-tight text-neutral-900">
-            kicks<span className="text-orange-500">control</span>
-          </span>
-          <p className="text-neutral-500 text-sm mt-1">Inicia sesión en tu cuenta</p>
+          <Link href="/" className="type-style text-[2.75rem]">KicksControl</Link>
+          <p className="text-ink-soft text-sm mt-1">Inicia sesión en tu cuenta</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-neutral-200 p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="border-t border-form p-6 space-y-4">
           <div className="space-y-1">
-            <label htmlFor="email" className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">Email</label>
+            <label htmlFor="email" className="type-field">Email</label>
             <input id="email" type="email" autoComplete="email" value={email}
               onChange={e => setEmail(e.target.value)} placeholder="tu@email.com"
-              className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              className="w-full border border-form-rule px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-form" />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="password" className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">Contraseña</label>
+            <label htmlFor="password" className="type-field">Contraseña</label>
             <input id="password" type="password" autoComplete="current-password" value={password}
               onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-              className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              className="w-full border border-form-rule px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-form" />
           </div>
 
-          {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="text-xs text-alarm bg-transparent px-3 py-2">{error}</p>}
 
           <button type="submit" disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold text-sm rounded-xl py-2.5 transition-colors">
+            className="w-full bg-ink hover:bg-form-deep disabled:opacity-60 text-paper font-bold text-sm py-2.5 transition-colors">
             {loading ? 'Entrando…' : 'Iniciar sesión'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-neutral-500 mt-4">
+        <p className="text-center text-sm text-ink-soft mt-4">
           ¿No tienes cuenta?{' '}
-          <Link href="/register" className="text-orange-500 font-semibold hover:underline">Regístrate</Link>
+          <Link href="/register" className="text-form font-semibold hover:underline">Regístrate</Link>
         </p>
       </div>
     </div>

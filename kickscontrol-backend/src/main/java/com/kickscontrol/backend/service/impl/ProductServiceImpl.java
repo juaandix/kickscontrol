@@ -36,10 +36,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponseDto> findAll(String search, String brand, String gender, String category,
-                                            BigDecimal minPrice, BigDecimal maxPrice,
+                                            String productType, BigDecimal minPrice, BigDecimal maxPrice,
                                             String size, Boolean inStock, Pageable pageable) {
         Specification<Product> spec = ProductSpecification.withFilters(
-                search, brand, gender, category, minPrice, maxPrice, size, inStock
+                search, brand, gender, category, productType, minPrice, maxPrice, size, inStock
         );
         return productRepository.findAll(spec, pageable)
                 .map(ProductResponseDto::summary);
@@ -50,7 +50,7 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductResponseDto> findAllWithVariants() {
         // Vista de inventario: necesita las variantes completas, no el resumen del catálogo
         Specification<Product> spec = ProductSpecification.withFilters(
-                null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null
         );
         return productRepository.findAll(spec, Sort.by("id")).stream()
                 .map(ProductResponseDto::from)
@@ -85,6 +85,7 @@ public class ProductServiceImpl implements ProductService {
                 .description(dto.getDescription())
                 .gender(dto.getGender())
                 .category(dto.getCategory())
+                .productType(dto.getProductType() != null ? dto.getProductType() : "FOOTWEAR")
                 .basePrice(dto.getBasePrice())
                 .imageUrl(dto.getImageUrl())
                 .build();
@@ -111,6 +112,7 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(dto.getDescription());
         product.setGender(dto.getGender());
         product.setCategory(dto.getCategory());
+        if (dto.getProductType() != null) product.setProductType(dto.getProductType());
         product.setBasePrice(dto.getBasePrice());
         product.setImageUrl(dto.getImageUrl());
 

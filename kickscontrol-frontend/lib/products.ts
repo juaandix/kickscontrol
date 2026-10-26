@@ -7,12 +7,15 @@ export async function fetchProducts(filters: ProductFilters = {}): Promise<PageR
   if (filters.brand) params.set('brand', filters.brand)
   if (filters.gender) params.set('gender', filters.gender)
   if (filters.category) params.set('category', filters.category)
+  if (filters.type) params.set('type', filters.type)
   if (filters.minPrice != null) params.set('minPrice', String(filters.minPrice))
   if (filters.maxPrice != null) params.set('maxPrice', String(filters.maxPrice))
   if (filters.size) params.set('size', filters.size)
   if (filters.inStock != null) params.set('inStock', String(filters.inStock))
   if (filters.page != null) params.set('page', String(filters.page))
   if (filters.size_page != null) params.set('pageSize', String(filters.size_page))
+  if (filters.sortBy) params.set('sortBy', filters.sortBy)
+  if (filters.sortDir) params.set('sortDir', filters.sortDir)
 
   const qs = params.toString()
   const res = await apiClient.get<PageResponse<Product>>(`/api/products${qs ? `?${qs}` : ''}`)
@@ -32,4 +35,12 @@ export async function fetchBrands(): Promise<string[]> {
 export async function fetchCategories(): Promise<string[]> {
   const res = await apiClient.get<string[]>('/api/products/categories')
   return res.data
+}
+
+/** Every shoe in a category with its variants, for the category pages. Works on the server and in the browser. */
+export async function fetchCategoryShoes(category: string): Promise<Product[]> {
+  const page = await fetchProducts({ category, page: 0, size_page: 100 })
+  const details = await Promise.all(page.content.map(p => fetchProduct(p.id)))
+  // The listing carries totalStock, the detail carries variants: keep both
+  return page.content.map((p, i) => ({ ...p, ...details[i], totalStock: p.totalStock }))
 }

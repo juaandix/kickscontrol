@@ -30,6 +30,7 @@ public class ProductController {
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String gender,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String type,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) String size,
@@ -44,7 +45,7 @@ public class ProductController {
                 : Sort.by(sortBy).ascending();
 
         Page<ProductResponseDto> result = productService.findAll(
-                search, brand, gender, category, minPrice, maxPrice, size, inStock,
+                search, brand, gender, category, type, minPrice, maxPrice, size, inStock,
                 PageRequest.of(page, pageSize, sort)
         );
         return ResponseEntity.ok(ApiResponse.ok(result));

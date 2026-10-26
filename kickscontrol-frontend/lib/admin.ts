@@ -7,6 +7,7 @@ export interface ProductRequestDto {
   description: string
   gender: string
   category: string
+  productType: 'FOOTWEAR' | 'APPAREL'
   basePrice: number
   imageUrl: string
 }

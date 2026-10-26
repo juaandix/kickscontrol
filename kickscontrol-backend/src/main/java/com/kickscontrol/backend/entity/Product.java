@@ -30,6 +30,11 @@ public class Product {
 
     private String category;
 
+    /** FOOTWEAR or APPAREL: what the product is, independent of the sport category it belongs to */
+    @Column(name = "product_type", nullable = false)
+    @Builder.Default
+    private String productType = "FOOTWEAR";
+
     @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal basePrice;
 

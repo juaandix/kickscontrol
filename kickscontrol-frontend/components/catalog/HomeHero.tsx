@@ -6,8 +6,8 @@ export function HomeHero() {
     <VideoHero
       video="/media/hero-street.mp4"
       poster="/media/hero-street.jpg"
-      title="Zapatillas con stock real por talla y color"
-      subtitle="Running, basketball, lifestyle y skate. Lo que ves disponible, está en el almacén."
+      title="Lo que ves, está en el almacén."
+      subtitle="Zapatillas y ropa de running, basketball, lifestyle y skate, con el stock real de cada talla y color contado al momento."
       cta="Ver colección"
       target="catalog"
     />

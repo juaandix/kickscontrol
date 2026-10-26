@@ -28,7 +28,7 @@ export function VariantMatrix({ variants, selectedId, onSelect }: Props) {
         <caption className="sr-only">Unidades disponibles por color y talla</caption>
         <thead>
           <tr className="border-b border-ink">
-            <th scope="col" className="type-field py-2 pr-3 font-semibold">Talla EU</th>
+            <th scope="col" className="type-field py-2 pr-3 font-semibold">{sizes.every(s => /^\d/.test(s)) ? 'Talla EU' : 'Talla'}</th>
             {sizes.map(size => (
               <th key={size} scope="col" className="type-field w-14 py-2 text-center font-semibold">
                 {size}

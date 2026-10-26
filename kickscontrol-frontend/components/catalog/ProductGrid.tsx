@@ -18,6 +18,7 @@ export function ProductGrid({ category }: { category?: string }) {
     brand: searchParams.get('brand') ?? undefined,
     gender: searchParams.get('gender') ?? undefined,
     category: category ?? searchParams.get('category') ?? undefined,
+    type: searchParams.get('type') ?? undefined,
     minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined,
     maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined,
     size: searchParams.get('size') ?? undefined,
@@ -69,8 +70,8 @@ export function ProductGrid({ category }: { category?: string }) {
 
   return (
     <div className={isPlaceholderData ? 'grid-busy' : 'grid-idle'} aria-busy={isPlaceholderData}>
-      <p className="pb-4 text-sm text-ink-soft">
-        {data.totalElements} {data.totalElements === 1 ? 'producto' : 'productos'}
+      <p className="type-label pb-4 text-ink-soft">
+        {data.totalElements} {data.totalElements === 1 ? 'referencia' : 'referencias'} en el almacén
       </p>
       {/* Keyed by the query so a new result set replays the stagger */}
       <div key={searchParams.toString()} className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4">

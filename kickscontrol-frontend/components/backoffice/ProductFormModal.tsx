@@ -44,6 +44,7 @@ export function ProductFormModal({ product, onClose }: Props) {
     description: product?.description ?? '',
     gender: product?.gender ?? 'HOMBRE',
     category: product?.category ?? 'LIFESTYLE',
+    productType: product?.productType ?? 'FOOTWEAR',
     basePrice: product?.basePrice ?? 0,
     imageUrl: product?.imageUrl ?? '',
   })
@@ -202,6 +203,18 @@ export function ProductFormModal({ product, onClose }: Props) {
                   className={inputCls}
                 >
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Tipo</label>
+                <select
+                  value={form.productType}
+                  onChange={e => setField('productType', e.target.value as ProductRequestDto['productType'])}
+                  className={inputCls}
+                >
+                  <option value="FOOTWEAR">Calzado</option>
+                  <option value="APPAREL">Ropa</option>
                 </select>
               </div>
 

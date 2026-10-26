@@ -5,7 +5,8 @@ import Image from 'next/image'
 import { ViewTransition } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchProduct } from '@/lib/products'
-import { LOW_STOCK, formatPrice, hasBackdrop, rawImage, sortSizes, productImage } from '@/lib/sheet'
+import { LOW_STOCK, formatPrice, hasBackdrop, rawImage, sortSizes, productImage, styleCode } from '@/lib/sheet'
+import { Barcode } from '@/components/brand/Barcode'
 import type { Product } from '@/types'
 
 interface ProductCardProps {
@@ -14,7 +15,7 @@ interface ProductCardProps {
   morph?: boolean
 }
 
-/** A product in the grid: photo on its tile, small captions, and its sizes in stock on hover. */
+/** A product in the grid: photo on its tile, captioned like the end label of its shoebox, sizes in stock on hover. */
 export function ProductCard({ product, morph = false }: ProductCardProps) {
   const totalStock = product.totalStock ?? 0
   const isOutOfStock = totalStock === 0
@@ -31,6 +32,8 @@ export function ProductCard({ product, morph = false }: ProductCardProps) {
     if (v.isActive) unitsBySize.set(v.size, (unitsBySize.get(v.size) ?? 0) + v.stockQuantity)
   }
   const sizesInStock = sortSizes([...unitsBySize.keys()]).filter(size => unitsBySize.get(size)! > 0)
+  // The real style code from the variant SKUs, or the catalogue reference until the detail arrives
+  const reference = (detail && styleCode(detail.variants)) ?? `KC-${String(product.id).padStart(4, '0')}`
 
   const tile = (
     <div className="tile tile-zoom relative aspect-square overflow-hidden">
@@ -59,7 +62,14 @@ export function ProductCard({ product, morph = false }: ProductCardProps) {
       <div className="pt-3 text-sm">
         <p className="text-xs text-ink-soft">{product.brand}</p>
         <h3 className="mt-0.5 font-medium">{product.name}</h3>
-        <div className="relative mt-1 h-5">
+        <div className="type-label mt-2 flex items-center gap-2 border-t border-dashed border-form-rule pt-2 text-ink-soft">
+          <Barcode code={reference} className="h-3 text-ink" />
+          <span className="truncate">{reference}</span>
+          <span className={`ml-auto shrink-0 ${isLow ? 'text-alarm' : ''}`}>
+            {isOutOfStock ? 'Sin stock' : isLow ? `Quedan ${totalStock}` : `${totalStock} uds`}
+          </span>
+        </div>
+        <div className="relative mt-1.5 h-5">
           <p className="card-price absolute inset-0">{formatPrice(product.basePrice)}</p>
           <p className="card-sizes absolute inset-0 truncate text-xs leading-5 text-ink-soft" aria-label="Tallas con stock">
             {sizesInStock.length > 0

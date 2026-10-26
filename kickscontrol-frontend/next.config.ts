@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       { hostname: "static.nike.com" },
       { hostname: "images.puma.com" },
       { hostname: "m.media-amazon.com" },
+      { hostname: "images.unsplash.com" },
     ],
   },
 };

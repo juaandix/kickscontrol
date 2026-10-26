@@ -16,6 +16,7 @@ public class ProductResponseDto {
     private String description;
     private String gender;
     private String category;
+    private String productType;
     private BigDecimal basePrice;
     private String imageUrl;
     private Boolean isActive;
@@ -39,6 +40,7 @@ public class ProductResponseDto {
                 .description(p.getDescription())
                 .gender(p.getGender())
                 .category(p.getCategory())
+                .productType(p.getProductType())
                 .basePrice(p.getBasePrice())
                 .imageUrl(p.getImageUrl())
                 .isActive(p.getIsActive())
@@ -60,6 +62,7 @@ public class ProductResponseDto {
                 .description(p.getDescription())
                 .gender(p.getGender())
                 .category(p.getCategory())
+                .productType(p.getProductType())
                 .basePrice(p.getBasePrice())
                 .imageUrl(p.getImageUrl())
                 .isActive(p.getIsActive())

@@ -13,7 +13,7 @@ export function CategoryTiles() {
   const leads = useQueries({
     queries: categories.map(category => ({
       queryKey: ['products', 'category-lead', category],
-      queryFn: () => fetchProducts({ category, page: 0, size_page: 1 }),
+      queryFn: () => fetchProducts({ category, type: 'FOOTWEAR', page: 0, size_page: 12 }),
     })),
   })
 
@@ -22,7 +22,9 @@ export function CategoryTiles() {
       <h2 id="lines-title" className="type-section pb-5">Comprar por categoría</h2>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {categories.map((category, i) => {
-          const lead = leads[i]?.data?.content[0]
+          // Lead with a studio shot where the category has one: street photos drown the tile's title
+          const shoes = leads[i]?.data?.content ?? []
+          const lead = shoes.find(p => p.imageUrl && !p.imageUrl.includes('images.unsplash.com')) ?? shoes[0]
           return (
             <Link
               key={category}

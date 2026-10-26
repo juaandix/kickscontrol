@@ -34,7 +34,7 @@ export function CartDrawer() {
         aria-labelledby="cart-title"
         onAnimationEnd={e => { if (closing && e.target === e.currentTarget) setMounted(false) }}
         inert={closing}
-        className={`sheet ${closing ? 'drawer-out' : 'drawer-in'} fixed top-0 right-0 z-50 flex h-dvh w-full max-w-md flex-col border-l border-form-rule shadow-[-24px_0_48px_-24px_rgba(17,17,17,0.25)]`}
+        className={`sheet tone-reset ${closing ? 'drawer-out' : 'drawer-in'} fixed top-0 right-0 z-50 flex h-dvh w-full max-w-md flex-col border-l border-form-rule shadow-[-24px_0_48px_-24px_rgba(17,17,17,0.25)]`}
         style={{ background: 'var(--sheet)' }}
       >
         <div className="flex items-center justify-between border-b border-form-rule px-5 py-3">
@@ -68,6 +68,7 @@ export function CartDrawer() {
                     <p className="type-field">{item.productBrand}</p>
                     <p className="truncate font-semibold">{item.productName}</p>
                     <p className="text-xs text-ink-soft">Talla {item.size} · {item.color}</p>
+                    <p className="type-label mt-0.5 text-ink-soft">{item.sku}</p>
 
                     <div className="mt-2 flex items-center justify-between">
                       <div className="flex items-center border border-form-rule">
@@ -113,7 +114,7 @@ export function CartDrawer() {
         {items.length > 0 && (
           <div className="border-t border-form-rule px-5 py-4">
             <dl className="mb-3 flex items-baseline justify-between">
-              <dt className="type-field">Total · {totalItems} {totalItems === 1 ? 'par' : 'pares'}</dt>
+              <dt className="type-field">Total · {totalItems} {totalItems === 1 ? 'artículo' : 'artículos'}</dt>
               <dd className="text-2xl font-bold">{formatPrice(totalAmount)}</dd>
             </dl>
             <Link
@@ -121,7 +122,7 @@ export function CartDrawer() {
               onClick={closeCart}
               className="sheen grid h-14 place-items-center bg-ink font-bold text-paper transition-[background-color,transform] duration-150 hover:bg-form-deep active:scale-[0.99]"
             >
-              Finalizar compra
+              Pasar por caja
             </Link>
           </div>
         )}

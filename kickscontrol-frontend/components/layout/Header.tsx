@@ -7,6 +7,7 @@ import { Suspense, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 import { CartDrawer } from '@/components/cart/CartDrawer'
+import { Wordmark } from '@/components/brand/Wordmark'
 import { MagnifyingGlassIcon, ShoppingBagIcon, UserIcon, ArrowRightStartOnRectangleIcon } from '@heroicons/react/24/outline'
 
 const CATEGORIES = ['Running', 'Basketball', 'Lifestyle', 'Skateboarding']
@@ -31,7 +32,7 @@ function HeaderSearch() {
         value={value}
         onChange={e => setValue(e.target.value)}
         placeholder="Buscar en KicksControl"
-        aria-label="Buscar zapatillas"
+        aria-label="Buscar en el catálogo"
         className="w-56 border-b border-ink bg-transparent py-1.5 pl-6 text-sm placeholder:text-ink-soft focus:outline-none lg:w-64"
       />
     </form>
@@ -48,8 +49,8 @@ export function Header() {
     <>
       <header className="sticky top-0 z-40 border-b border-form-rule bg-paper" style={{ viewTransitionName: 'site-header' }}>
         <div className="mx-auto flex h-16 max-w-[90rem] items-center gap-8 px-4 sm:px-6 lg:px-10">
-          <Link href="/" className="shrink-0 text-[1.375rem] font-extrabold tracking-[-0.04em]">
-            KICKSCONTROL
+          <Link href="/" className="shrink-0" aria-label="KicksControl, inicio">
+            <Wordmark />
           </Link>
 
           <nav aria-label="Categorías" className="hidden items-center gap-6 text-sm font-medium lg:flex">
@@ -58,6 +59,7 @@ export function Header() {
                 {cat}
               </Link>
             ))}
+            <Link href="/?type=APPAREL#catalog" className="underline-offset-4 hover:underline">Ropa</Link>
             {isStaff && <Link href="/backoffice" className="text-ink-soft hover:text-ink">Backoffice</Link>}
           </nav>
 
@@ -96,6 +98,7 @@ export function Header() {
           {CATEGORIES.map(cat => (
             <Link key={cat} href={categoryHref(cat)} aria-current={pathname === categoryHref(cat) ? 'page' : undefined} className="shrink-0 underline-offset-4 aria-[current=page]:underline">{cat}</Link>
           ))}
+          <Link href="/?type=APPAREL#catalog" className="shrink-0">Ropa</Link>
         </nav>
       </header>
       <CartDrawer />

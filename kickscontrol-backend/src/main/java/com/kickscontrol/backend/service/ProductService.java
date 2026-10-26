@@ -13,7 +13,7 @@ import java.util.List;
 
 public interface ProductService {
     Page<ProductResponseDto> findAll(String search, String brand, String gender, String category,
-                                     BigDecimal minPrice, BigDecimal maxPrice,
+                                     String productType, BigDecimal minPrice, BigDecimal maxPrice,
                                      String size, Boolean inStock, Pageable pageable);
 
     List<ProductResponseDto> findAllWithVariants();

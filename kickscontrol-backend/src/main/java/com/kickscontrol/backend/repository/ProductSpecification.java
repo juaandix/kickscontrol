@@ -16,6 +16,7 @@ public class ProductSpecification {
             String brand,
             String gender,
             String category,
+            String productType,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             String size,
@@ -43,6 +44,9 @@ public class ProductSpecification {
             }
             if (category != null && !category.isBlank()) {
                 predicates.add(cb.equal(cb.lower(root.get("category")), category.toLowerCase()));
+            }
+            if (productType != null && !productType.isBlank()) {
+                predicates.add(cb.equal(root.get("productType"), productType.toUpperCase()));
             }
             if (minPrice != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("basePrice"), minPrice));

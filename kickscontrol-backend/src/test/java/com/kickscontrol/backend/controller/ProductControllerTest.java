@@ -43,7 +43,7 @@ class ProductControllerTest {
 
     @Test
     void getProducts_noFilters_returns200WithPage() throws Exception {
-        when(productService.findAll(isNull(), isNull(), isNull(), isNull(), isNull(),
+        when(productService.findAll(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
                 isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(SAMPLE_PRODUCT)));
 
@@ -56,7 +56,7 @@ class ProductControllerTest {
 
     @Test
     void getProducts_withBrandFilter_returns200() throws Exception {
-        when(productService.findAll(isNull(), eq("Nike"), isNull(), isNull(), isNull(),
+        when(productService.findAll(isNull(), eq("Nike"), isNull(), isNull(), isNull(), isNull(),
                 isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(SAMPLE_PRODUCT)));
 
@@ -66,8 +66,19 @@ class ProductControllerTest {
     }
 
     @Test
+    void getProducts_withTypeFilter_passesTypeToService() throws Exception {
+        when(productService.findAll(isNull(), isNull(), isNull(), isNull(), eq("APPAREL"), isNull(),
+                isNull(), isNull(), isNull(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(SAMPLE_PRODUCT)));
+
+        mockMvc.perform(get("/api/products").param("type", "APPAREL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].name").value("Air Max 90"));
+    }
+
+    @Test
     void getProducts_emptyResult_returns200WithEmptyPage() throws Exception {
-        when(productService.findAll(any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+        when(productService.findAll(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/api/products"))

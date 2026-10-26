@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT,
     gender      VARCHAR(20),
     category    VARCHAR(100),
+    product_type VARCHAR(20) NOT NULL DEFAULT 'FOOTWEAR',
     base_price  NUMERIC(10, 2) NOT NULL,
     image_url   VARCHAR(500),
     is_active   BOOLEAN NOT NULL DEFAULT TRUE,
@@ -32,6 +33,7 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE INDEX IF NOT EXISTS idx_products_brand    ON products(brand);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_type     ON products(product_type);
 CREATE INDEX IF NOT EXISTS idx_products_active   ON products(is_active);
 
 -- Product Variants (SKU level — talla + color)

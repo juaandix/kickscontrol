@@ -2,6 +2,12 @@ import type { ProductVariant } from '@/types'
 
 /** The store's full EU size run, as printed on every line sheet cell. */
 export const SIZE_RUN = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45']
+export const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+
+export const PRODUCT_TYPE_LABEL: Record<string, string> = { FOOTWEAR: 'Calzado', APPAREL: 'Ropa' }
+
+/** Older API responses carry no type: those are shoes. */
+export const isApparel = (product: { productType?: string }) => product.productType === 'APPAREL'
 
 export const LOW_STOCK = 5
 
@@ -24,14 +30,20 @@ export function styleCode(variants: ProductVariant[]): string | null {
 /** next/image re-encodes already-escaped URLs (e.g. %27), and Puma's CDN refuses the optimizer; serve those as-is. */
 export const rawImage = (url: string) => url.includes('%') || url.includes('images.puma.com')
 
-/** Nike and Puma ship studio shots with their own backdrop: show them as full-bleed photos, not cut-outs. */
-export const hasBackdrop = (url: string) => url.includes('static.nike.com') || url.includes('images.puma.com')
+/** Nike and Puma studio shots and Unsplash photos have their own backdrop: show them full-bleed, not as cut-outs. */
+export const hasBackdrop = (url: string) =>
+  url.includes('static.nike.com') || url.includes('images.puma.com') || url.includes('images.unsplash.com')
 
 /** The catalog stores Nike's 320px default rendition; ask Nike's CDN for its 1728px product-page size instead. */
 export const productImage = (url: string) =>
   url.includes('static.nike.com') ? url.replace('/t_default/', '/t_PDP_1728_v1/f_auto,q_auto:eco/') : url
 
-export const sortSizes = (sizes: string[]) => [...sizes].sort((a, b) => Number(a) - Number(b))
+/** Shoe sizes sort by number, clothing sizes by their run (XS → XXL). */
+export const sortSizes = (sizes: string[]) => [...sizes].sort((a, b) => {
+  const ia = APPAREL_SIZES.indexOf(a), ib = APPAREL_SIZES.indexOf(b)
+  if (ia !== -1 || ib !== -1) return (ia === -1 ? -1 : ia) - (ib === -1 ? -1 : ib)
+  return Number(a) - Number(b)
+})
 
 // Colourway names come from the brands ("Chicago", "Core Black", "Sail/Pink");
 // each part maps to the ink a buyer would expect on the swatch.

@@ -33,6 +33,7 @@ Built by an ex Foot Locker Shift Leader: inventory is modeled per real variant (
 - All UI copy is in Spanish (`lang="es"`).
 - It is openly a portfolio project; footer discloses this.
 - Visual reference set by the user (2026-10-17): Kith (kith.com) and SVD (sivasdescalzo.com). White ground, photography-led, minimal chrome, clean product grid with small captions. Their craft level is the bar; KicksControl executes the premium sneaker-store standard rather than an invented world.
+- Own personality on top of that base (chosen 2026-10-26): the stockroom. Shoebox end labels (barcode drawn from the real reference, style code / SKU, units) caption product cards, the product page prints the label of the selected variant's box, a live stock strip runs above the header, the voice is shop-floor Spanish ("Lo que ves, está en el almacén", "Pasar por caja"), and the footer tells the true story: built by an ex Foot Locker Shift Leader. Label lettering is JetBrains Mono (`.type-label`). Every number shown must come from the API.
 
 ## Evidence on Hand
 - Real seeded catalog data and product images served by the API.

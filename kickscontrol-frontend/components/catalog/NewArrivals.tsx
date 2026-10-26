@@ -4,19 +4,21 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchProducts } from '@/lib/products'
 import { ProductCard } from '@/components/ui/ProductCard'
 
-/** A row of four styles under the hero, like the reference stores' "new in" strip. */
+/** The four references most recently received into the warehouse. */
 export function NewArrivals() {
   const { data } = useQuery({
     queryKey: ['products', 'new-arrivals'],
-    queryFn: () => fetchProducts({ page: 0, size_page: 5 }),
+    queryFn: () => fetchProducts({ page: 0, size_page: 4, sortBy: 'createdAt', sortDir: 'desc' }),
   })
-  // The first style is already the hero; show the next four.
-  const products = data?.content.slice(1, 5) ?? []
+  const products = data?.content ?? []
 
   return (
     <section aria-labelledby="new-title" className="pt-16">
       <div className="flex items-baseline justify-between pb-5">
-        <h2 id="new-title" className="type-section">Novedades</h2>
+        <div>
+          <h2 id="new-title" className="type-section">Últimas entradas</h2>
+          <p className="type-label mt-1 text-ink-soft">Recién recibidas en el almacén</p>
+        </div>
         <a href="#catalog" className="text-sm underline underline-offset-4">Ver todo</a>
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4">

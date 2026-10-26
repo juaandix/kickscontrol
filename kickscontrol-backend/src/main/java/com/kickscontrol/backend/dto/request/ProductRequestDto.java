@@ -26,6 +26,10 @@ public class ProductRequestDto {
     @NotBlank(message = "Category is required")
     private String category;
 
+    /** FOOTWEAR or APPAREL; footwear when omitted */
+    @Pattern(regexp = "FOOTWEAR|APPAREL", message = "Product type must be FOOTWEAR or APPAREL")
+    private String productType;
+
     @NotNull(message = "Base price is required")
     @DecimalMin(value = "0.01", message = "Base price must be greater than 0")
     private BigDecimal basePrice;

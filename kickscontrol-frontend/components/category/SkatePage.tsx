@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { formatPrice } from '@/lib/sheet'
-import { BLEED, GUTTER, ShoeImage, categoryFigures, useCategoryProducts, useLoopVideo } from './shared'
-import { zineMarker } from './fonts'
+import { formatPrice, hasBackdrop, isApparel } from '@/lib/sheet'
+import type { Product } from '@/types'
+import {
+  BLEED, GUTTER, OtherCategories, ShoeImage, categoryFigures, useCategoryProducts, useLoopVideo, useQuickAdd,
+  type CategoryPageProps,
+} from './shared'
 
 const BLUE = '#2f6bff'
 const marker = 'font-[family-name:var(--font-zine)]'
-
-/** Photocopier grain: fractal noise as a tiled background. */
-const GRAIN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.18'/%3E%3C/svg%3E")`
 
 /** Marker notes on the shoe, in percent of the photo box: label position, arrow start (clear of the text) and tip. */
 const NOTES = [
@@ -28,30 +28,84 @@ const DICTIONARY = [
 
 /** A strip of masking tape holding the cut-outs down. */
 function Tape({ className }: { className: string }) {
-  return <span className={`absolute z-10 h-7 w-28 bg-[#e9dfc4]/85 shadow-sm ${className}`} aria-hidden />
+  return <span className={`tape absolute z-10 h-7 w-28 bg-[#e9dfc4]/85 shadow-sm ${className}`} aria-hidden />
 }
 
-/** VHS timecode counting up while the tape plays. Reduced motion holds it. */
-function Timecode() {
+/** VHS timecode: only runs while the tape plays. */
+function Timecode({ running }: { running: boolean }) {
   const [s, setS] = useState(754)
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!running) return
     const id = setInterval(() => setS(v => v + 1), 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [running])
   const p = (n: number) => String(n).padStart(2, '0')
   return <span className="tabular-nums">SP {p(Math.floor(s / 3600))}:{p(Math.floor(s / 60) % 60)}:{p(s % 60)}</span>
 }
 
-export function SkatePage({ video, poster }: { video: string; poster: string }) {
+/** A shoe as a sticker: lifts off the page on hover, and its price tag opens the sizes to stick it in the cart. */
+function Sticker({ product, tilt }: { product: Product; tilt: number }) {
+  const q = useQuickAdd(product)
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="sticker relative w-72 bg-white p-3 shadow-[6px_6px_0_#111]" style={{ rotate: `${tilt}deg` }}>
+      <Tape className="-top-4 left-1/2 -translate-x-1/2 rotate-2" />
+      <Link href={`/products/${product.id}`} className="relative isolate block aspect-square bg-white">
+        <ShoeImage product={product} sizes="288px" />
+      </Link>
+      <Link href={`/products/${product.id}`} className={`${marker} mt-2 block text-2xl leading-none hover:underline`}>{product.name}</Link>
+      <div className="mt-1 flex items-center justify-between font-mono text-xs">
+        <span>{product.brand}</span>
+        {q.colors.length > 0 ? (
+          <button type="button" aria-expanded={open} onClick={() => setOpen(o => !o)} className="press px-1.5 py-0.5 text-white" style={{ background: BLUE }}>
+            {formatPrice(q.price)} {open ? '×' : '+'}
+          </button>
+        ) : <span className="line-through">AGOTADA</span>}
+      </div>
+      {open && (
+        <div className="label-in mt-3 border-t-2 border-dashed border-black/30 pt-3">
+          {q.colors.length > 1 && (
+            <div className="mb-2 flex flex-wrap gap-1" role="radiogroup" aria-label="Color">
+              {q.colors.map(c => (
+                <button key={c} type="button" role="radio" aria-checked={q.color === c} onClick={() => q.setColor(c)}
+                  className={`press border-2 px-1.5 font-mono text-[0.6875rem] ${q.color === c ? 'border-black bg-black text-white' : 'border-black/30'}`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Talla">
+            {q.sizes.map(({ size, stock }) => (
+              <button key={size} type="button" role="radio" aria-checked={q.size === size} disabled={stock === 0} onClick={() => q.setSize(size)}
+                className={`press size-9 border-2 font-mono text-xs disabled:opacity-25 disabled:line-through ${q.size === size ? 'border-black bg-black text-white' : 'border-black/30 hover:border-black'}`}>
+                {size}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={q.add} disabled={!q.variant || q.status === 'adding'}
+            className={`${marker} press mt-3 h-11 w-full text-lg text-white disabled:bg-black/20`} style={q.variant ? { background: BLUE } : undefined}>
+            <span key={q.status} className={q.status === 'added' ? 'label-in inline-block' : undefined}>
+              {q.status === 'added' ? '¡Pegada al carrito!' : q.status === 'adding' ? 'Pegando…' : q.variant ? 'Al carrito' : 'Elige talla'}
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function SkatePage({ slug, video, poster, initialProducts }: CategoryPageProps) {
   const ref = useRef<HTMLVideoElement>(null)
-  useLoopVideo(ref)
-  const { data: products = [] } = useCategoryProducts('Skateboarding')
-  const f = categoryFigures(products)
-  const hero = products[0]
+  const { playing, toggle } = useLoopVideo(ref)
+  const { data: products = [], isPending } = useCategoryProducts('Skateboarding', initialProducts)
+  const shoes = products.filter(p => !isApparel(p))
+  const merch = products.filter(isApparel)
+  const f = categoryFigures(shoes)
+  // The marker notes are drawn for a side-on cut-out, so annotate a studio shot, not a street photo
+  const hero = shoes.find(p => p.imageUrl && !hasBackdrop(p.imageUrl))
 
   return (
-    <div className={`${BLEED} ${zineMarker.variable} overflow-hidden bg-[#f4f3ee] text-[#111]`} style={{ backgroundImage: GRAIN }}>
+    <div className={`${BLEED} overflow-hidden text-[#111]`}>
       {/* Cover: the tape and the title scrawled over it */}
       <section aria-labelledby="hero-title" className={`${GUTTER} relative pt-12 pb-24`}>
         <p className="font-mono text-xs tracking-widest">KICKSCONTROL ZINE · Nº 1 · FOTOCOPIADO EN CASA</p>
@@ -59,30 +113,21 @@ export function SkatePage({ video, poster }: { video: string; poster: string }) 
           <Tape className="-top-3 left-8 -rotate-6" />
           <Tape className="-top-3 right-10 rotate-3" />
           <div className="relative rotate-[0.6deg] border-[10px] border-black bg-black">
-            <video
-              ref={ref}
-              className="bg-video aspect-video w-full object-cover contrast-125 grayscale"
-              style={{ objectPosition: 'center 65%' }}
-              src={video}
-              poster={poster}
-              muted
-              loop
-              playsInline
-              aria-hidden
-            />
+            <video ref={ref} className="bg-video aspect-video w-full object-cover contrast-125 grayscale" style={{ objectPosition: 'center 65%' }}
+              src={video} poster={poster} muted loop playsInline preload="metadata" aria-hidden />
             {/* Scanlines and the VHS readout */}
             <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0.25)_0_1px,transparent_1px_3px)]" aria-hidden />
-            <div className="absolute inset-x-0 top-0 flex justify-between p-4 font-mono text-sm text-white" aria-hidden>
-              <span>▶ PLAY</span>
-              <Timecode />
+            <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4 font-mono text-sm text-white">
+              <button type="button" onClick={toggle} className="press bg-black/40 px-2 py-0.5 hover:bg-black/70" aria-label={playing ? 'Pausar vídeo' : 'Reproducir vídeo'}>
+                {playing ? '❚❚ PAUSE' : '▶ PLAY'}
+              </button>
+              <span aria-hidden><Timecode running={playing} /></span>
             </div>
           </div>
-          <h1
-            id="hero-title"
-            className={`${marker} absolute -bottom-14 left-1/2 w-max -translate-x-1/2 -rotate-3 text-[clamp(4rem,13vw,10rem)] leading-none`}
-            style={{ color: BLUE, textShadow: '4px 4px 0 #111' }}
-          >
-            Skate
+          <h1 id="hero-title" className="absolute -bottom-14 left-1/2 w-max -translate-x-1/2">
+            <span className={`${marker} slap block -rotate-3 text-[clamp(4rem,13vw,10rem)] leading-none`} style={{ color: BLUE, textShadow: '4px 4px 0 #111' }}>
+              Skate
+            </span>
           </h1>
         </div>
         <p className={`${marker} mx-auto mt-24 max-w-xl rotate-1 text-center text-2xl`}>
@@ -94,35 +139,37 @@ export function SkatePage({ video, poster }: { video: string; poster: string }) 
       {hero && (
         <section aria-labelledby="anatomy-title" className={`${GUTTER} border-t-2 border-dashed border-black/40 py-20`}>
           <h2 id="anatomy-title" className={`${marker} -rotate-1 text-5xl`}>Anatomía de una skate shoe</h2>
-          <Link href={`/products/${hero.id}`} className="group relative mx-auto mt-12 block max-w-4xl">
-            <div className="relative isolate aspect-[16/10] bg-white">
-              <ShoeImage product={hero} sizes="(max-width: 1024px) 100vw, 900px" pad="p-16" className="contrast-110" />
-            </div>
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 hidden h-full w-full md:block" aria-hidden>
-              {NOTES.map(n => (
-                <path
-                  key={n.text}
-                  d={`M ${n.from[0]} ${n.from[1]} Q ${(n.from[0] + n.to[0]) / 2 + 5} ${(n.from[1] + n.to[1]) / 2 - 4} ${n.to[0]} ${n.to[1]}`}
-                  fill="none"
-                  stroke={BLUE}
-                  strokeWidth="2.5"
-                  vectorEffect="non-scaling-stroke"
-                />
+          <figure className="mx-auto mt-12 max-w-4xl">
+            <Link href={`/products/${hero.id}`} className="relative block">
+              <div className="relative isolate aspect-[16/10] bg-white">
+                <ShoeImage product={hero} sizes="(max-width: 1024px) 100vw, 900px" pad="p-10 md:p-16" className="contrast-110" />
+              </div>
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 hidden h-full w-full md:block" aria-hidden>
+                {NOTES.map(n => (
+                  <path key={n.text} d={`M ${n.from[0]} ${n.from[1]} Q ${(n.from[0] + n.to[0]) / 2 + 5} ${(n.from[1] + n.to[1]) / 2 - 4} ${n.to[0]} ${n.to[1]}`}
+                    fill="none" stroke={BLUE} strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+                ))}
+              </svg>
+              {NOTES.map((n, i) => (
+                <span key={n.text} className={`${marker} absolute hidden max-w-56 text-lg leading-tight md:block`}
+                  style={{ left: `${n.x}%`, top: `${n.y}%`, color: BLUE, rotate: `${i % 2 ? 2 : -2}deg` }}>
+                  {n.text}
+                </span>
               ))}
-            </svg>
-            {NOTES.map((n, i) => (
-              <span
-                key={n.text}
-                className={`${marker} absolute hidden max-w-56 text-lg leading-tight md:block`}
-                style={{ left: `${n.x}%`, top: `${n.y}%`, color: BLUE, rotate: `${i % 2 ? 2 : -2}deg` }}
-              >
-                {n.text}
-              </span>
-            ))}
-            <ul className={`${marker} mt-6 space-y-2 text-lg md:hidden`} style={{ color: BLUE }}>
-              {NOTES.map(n => <li key={n.text}>→ {n.text}</li>)}
-            </ul>
-          </Link>
+              {/* On phones the notes become numbered marks on the shoe, with the legend below */}
+              {NOTES.map((n, i) => (
+                <span key={n.text} className={`${marker} absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-sm text-white md:hidden`}
+                  style={{ left: `${n.to[0]}%`, top: `${n.to[1]}%`, background: BLUE }} aria-hidden>
+                  {i + 1}
+                </span>
+              ))}
+            </Link>
+            <figcaption>
+              <ol className={`${marker} mt-6 space-y-2 text-lg md:hidden`} style={{ color: BLUE }}>
+                {NOTES.map((n, i) => <li key={n.text}>{i + 1}. {n.text}</li>)}
+              </ol>
+            </figcaption>
+          </figure>
         </section>
       )}
 
@@ -132,27 +179,24 @@ export function SkatePage({ video, poster }: { video: string; poster: string }) 
           <h2 id="stickers-title" className={`${marker} rotate-1 text-5xl`}>Pegatinas</h2>
           <p className="font-mono text-xs">{f.models} MODELO{f.models === 1 ? '' : 'S'} · {f.pairs} PARES EN STOCK · DESDE {formatPrice(f.from)}</p>
         </div>
-        <div className="mt-12 flex flex-wrap gap-12">
-          {products.map((p, i) => (
-            <Link
-              key={p.id}
-              href={`/products/${p.id}`}
-              className="press relative block w-72 bg-white p-3 shadow-[6px_6px_0_#111]"
-              style={{ rotate: `${[-4, 3, -2, 5][i % 4]}deg` }}
-            >
-              <Tape className="-top-4 left-1/2 -translate-x-1/2 rotate-2" />
-              <div className="relative isolate aspect-square bg-white">
-                <ShoeImage product={p} sizes="288px" />
-              </div>
-              <p className={`${marker} mt-2 text-2xl leading-none`}>{p.name}</p>
-              <p className="mt-1 flex justify-between font-mono text-xs">
-                <span>{p.brand}</span>
-                <span className="px-1.5 py-0.5 text-white" style={{ background: BLUE }}>{formatPrice(p.basePrice)}</span>
-              </p>
-            </Link>
-          ))}
+        <p className="mt-3 font-mono text-xs text-black/60">Pulsa el precio para elegir talla y pegarla al carrito.</p>
+        <div className="mt-12 flex flex-wrap items-start gap-12">
+          {isPending && !products.length && (
+            <div className="aspect-[4/5] w-72 -rotate-3 border-4 border-dashed border-black/30" aria-hidden />
+          )}
+          {shoes.map((p, i) => <Sticker key={p.id} product={p} tilt={[-4, 3, -2, 5][i % 4]} />)}
         </div>
       </section>
+
+      {merch.length > 0 && (
+        <section aria-labelledby="merch-title" className={`${GUTTER} border-t-2 border-dashed border-black/40 py-20`}>
+          <h2 id="merch-title" className={`${marker} -rotate-1 text-5xl`}>Merch</h2>
+          <p className="mt-3 font-mono text-xs text-black/60">ROPA PARA PATINAR · AGUANTA CAÍDAS Y LAVADOS</p>
+          <div className="mt-12 flex flex-wrap items-start gap-12">
+            {merch.map((p, i) => <Sticker key={p.id} product={p} tilt={[3, -3, 2, -5][i % 4]} />)}
+          </div>
+        </section>
+      )}
 
       {/* Glossary, typed out */}
       <section aria-labelledby="dict-title" className={`${GUTTER} border-t-2 border-dashed border-black/40 py-20`}>
@@ -169,18 +213,8 @@ export function SkatePage({ video, poster }: { video: string; poster: string }) 
 
       <nav aria-label="Otras categorías" className={`${GUTTER} border-t-2 border-dashed border-black/40 py-14`}>
         <p className="font-mono text-xs">MÁS SPOTS →</p>
-        <div className="mt-5 flex flex-wrap gap-5">
-          {[['running', 'Running'], ['basketball', 'Basketball'], ['lifestyle', 'Lifestyle']].map(([slug, name], i) => (
-            <Link
-              key={slug}
-              href={`/categoria/${slug}`}
-              className={`${marker} press inline-block bg-black px-5 py-2 text-2xl text-white`}
-              style={{ rotate: `${[-3, 2, -1][i]}deg` }}
-            >
-              {name}
-            </Link>
-          ))}
-        </div>
+        <OtherCategories slug={slug} className="mt-5 flex flex-wrap gap-5"
+          linkClassName={i => `${marker} press inline-block bg-black px-5 py-2 text-2xl text-white ${['-rotate-3', 'rotate-2', '-rotate-1'][i % 3]}`} />
       </nav>
     </div>
   )

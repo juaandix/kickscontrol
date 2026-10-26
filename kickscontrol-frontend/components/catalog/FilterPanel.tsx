@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CheckIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/20/solid'
 import { fetchBrands, fetchCategories } from '@/lib/products'
-import { GENDER_LABEL, SIZE_RUN } from '@/lib/sheet'
+import { APPAREL_SIZES, GENDER_LABEL, PRODUCT_TYPE_LABEL, SIZE_RUN } from '@/lib/sheet'
 
 const GENDERS = ['MAN', 'WOMAN', 'UNISEX']
 
@@ -114,18 +114,25 @@ export function FilterPanel({ lockedCategory = false }: { lockedCategory?: boole
   if (g) chips.push({ key: 'gender', label: GENDER_LABEL[g] ?? g })
   if (searchParams.get('inStock') === 'true') chips.push({ key: 'inStock', label: 'Con stock' })
 
+  const t = searchParams.get('type')
+  if (t) chips.push({ key: 'type', label: PRODUCT_TYPE_LABEL[t] ?? t })
+
   const inStock = searchParams.get('inStock') === 'true'
+  // Sizes follow the type: shoe sizes, clothing sizes, or both runs when browsing everything
+  const sizeRun = t === 'APPAREL' ? APPAREL_SIZES : t === 'FOOTWEAR' ? SIZE_RUN : [...SIZE_RUN, ...APPAREL_SIZES]
 
   return (
     <div ref={barRef}>
       <div className="flex flex-wrap items-center gap-2">
+        <Dropdown label="Tipo" paramKey="type" options={Object.entries(PRODUCT_TYPE_LABEL).map(([value, label]) => ({ value, label }))}
+          open={open === 'type'} onOpen={setOpen} active={t} onPick={toggle} />
         <Dropdown label="Marca" paramKey="brand" options={brands.map(b => ({ value: b, label: b }))}
           open={open === 'brand'} onOpen={setOpen} active={searchParams.get('brand')} onPick={toggle} />
         {!lockedCategory && (
           <Dropdown label="Categoría" paramKey="category" options={categories.map(c => ({ value: c, label: c }))}
             open={open === 'category'} onOpen={setOpen} active={searchParams.get('category')} onPick={toggle} />
         )}
-        <Dropdown label="Talla" paramKey="size" options={SIZE_RUN.map(s => ({ value: s, label: s }))} grid
+        <Dropdown label="Talla" paramKey="size" options={sizeRun.map(s => ({ value: s, label: s }))} grid
           open={open === 'size'} onOpen={setOpen} active={searchParams.get('size')} onPick={toggle} />
         <Dropdown label="Género" paramKey="gender" options={GENDERS.map(v => ({ value: v, label: GENDER_LABEL[v] }))}
           open={open === 'gender'} onOpen={setOpen} active={g} onPick={toggle} />

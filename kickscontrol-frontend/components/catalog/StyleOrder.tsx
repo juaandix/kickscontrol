@@ -7,6 +7,7 @@ import { StockBadge } from '@/components/ui/StockBadge'
 import { GENDER_LABEL, formatPrice } from '@/lib/sheet'
 import { CheckIcon } from '@heroicons/react/20/solid'
 import { VariantMatrix } from './VariantMatrix'
+import { Barcode } from '@/components/brand/Barcode'
 
 interface Props {
   product: Product
@@ -52,15 +53,29 @@ export function StyleOrder({ product, as: Heading = 'h2' }: Props) {
 
       <VariantMatrix variants={product.variants} selectedId={selected?.id ?? null} onSelect={setSelected} />
 
-      <div className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm" aria-live="polite">
-        {selected && (
-          <>
-            <span className="text-ink-soft">
-              {selected.color} · Talla {selected.size} · {selected.stockQuantity} {selected.stockQuantity === 1 ? 'disponible' : 'disponibles'}
-              {selected.priceModifier > 0 && ` · +${formatPrice(selected.priceModifier)}`}
-            </span>
-            <StockBadge stock={selected.stockQuantity} />
-          </>
+      {/* Picking a size prints the end label of the box that will ship */}
+      <div className="py-3" aria-live="polite">
+        {selected ? (
+          <div key={selected.id} className="label-in grid grid-cols-[1fr_auto] gap-x-4 border border-ink px-4 py-3">
+            <p className="type-label text-ink-soft">KicksControl · {product.brand}</p>
+            <p className="type-label row-span-2 self-center text-right">
+              Talla<span className="block text-2xl leading-none font-bold tracking-normal">{selected.size}</span>
+            </p>
+            <p className="text-sm font-semibold">{product.name} · {selected.color}</p>
+            <div className="col-span-2 mt-2 flex items-end gap-3 border-t border-dashed border-form-rule pt-2">
+              <Barcode code={selected.sku} className="h-7" />
+              <span className="type-label">{selected.sku}</span>
+              <span className="ml-auto flex items-center gap-2">
+                <span className="type-label text-ink-soft">
+                  {selected.stockQuantity} {selected.stockQuantity === 1 ? 'ud' : 'uds'}
+                  {selected.priceModifier > 0 && ` · +${formatPrice(selected.priceModifier)}`}
+                </span>
+                <StockBadge stock={selected.stockQuantity} />
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="type-label flex min-h-12 items-center text-ink-soft">Elige talla y color: te enseñamos la etiqueta de tu caja</p>
         )}
       </div>
 

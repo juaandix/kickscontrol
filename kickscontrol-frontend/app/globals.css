@@ -94,6 +94,15 @@ body {
   text-wrap: balance;
 }
 
+/* Shoebox-label lettering: references, SKUs, unit counts */
+.type-label {
+  font-family: var(--font-label), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Product photos sit on the paper like a printed halftone, not in a white box */
 .on-paper {
   mix-blend-mode: darken;
@@ -129,6 +138,7 @@ body {
   --lift-2: 0 18px 40px -24px rgba(17, 17, 17, 0.25);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 @theme inline {
@@ -355,6 +365,102 @@ body {
 }
 .card-in { animation: fade-up 420ms var(--ease-out) var(--d, 0ms) both; }
 
+/* ── Category tones: the store chrome takes each category page's world ── */
+.tone-night {
+  --paper: #0b0b0b; --paper-deep: #1c1c1c; --ink: #f2f2f2; --ink-soft: #9a9a9a;
+  --form: #c8f031; --form-deep: #2a2a2a; --form-rule: rgba(255, 255, 255, 0.12); --form-wash: #161616;
+  --sheet: #0b0b0b; color-scheme: dark;
+}
+.tone-court {
+  --paper: #10151f; --paper-deep: #1b2230; --ink: #ffffff; --ink-soft: #9aa3b2;
+  --form: #e8590c; --form-deep: #263042; --form-rule: rgba(255, 255, 255, 0.12); --form-wash: #171e2b;
+  --sheet: #10151f; color-scheme: dark;
+}
+.tone-cream {
+  --paper: #f3ede3; --paper-deep: #e8dfd1; --ink: #1d1a16; --ink-soft: #6e655a;
+  --form: #1d1a16; --form-deep: #3d362d; --form-rule: rgba(29, 26, 22, 0.2); --form-wash: #ebe4d7;
+  --sheet: #f3ede3;
+}
+.tone-zine {
+  --paper: #f4f3ee; --paper-deep: #e6e4dc; --ink: #111111; --ink-soft: #5c5c58;
+  --form: #2f6bff; --form-deep: #1d4fd8; --form-rule: rgba(17, 17, 17, 0.25); --form-wash: #ecebe5;
+  --sheet: #f4f3ee;
+  /* Photocopier grain over the whole sheet */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.28'/%3E%3C/svg%3E");
+}
+/* The cart keeps the store's own white wherever it opens */
+.tone-reset {
+  --paper: #ffffff; --paper-deep: #f2f2f2; --ink: #111111; --ink-soft: #6b6b6b;
+  --form: #111111; --form-deep: #3a3a3a; --form-rule: #e6e6e6; --form-wash: #f5f5f5;
+  --sheet: #ffffff; color-scheme: light; background-image: none;
+}
+
+/* ── Category pages: each walks in its own way ── */
+/* Running: the headline sprints in from the left */
+.run-sprint { animation: run-sprint 520ms var(--ease-out) var(--d, 0ms) both; }
+@keyframes run-sprint {
+  from { opacity: 0; transform: translateX(-48px) skewX(-8deg); }
+  to   { opacity: 1; transform: none; }
+}
+/* Basketball: the scoreboard powers on with a flicker, then the title tips off */
+.board-on { animation: board-on 700ms linear both; }
+@keyframes board-on {
+  0% { opacity: 0; } 10% { opacity: 1; } 16% { opacity: 0.25; } 26% { opacity: 1; } 32% { opacity: 0.5; } 42%, 100% { opacity: 1; }
+}
+.tipoff { animation: tipoff 600ms var(--ease-out) calc(300ms + var(--d, 0ms)) both; }
+@keyframes tipoff {
+  from { opacity: 0; transform: translateY(40%) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+/* Lifestyle: the masthead comes off the press, then the cover is unveiled top-down */
+.masthead-print { animation: masthead-print 900ms var(--ease-out) both; }
+@keyframes masthead-print {
+  from { opacity: 0; transform: scale(1.04); filter: blur(6px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+.cover-reveal { animation: cover-reveal 900ms var(--ease-out) 200ms both; }
+@keyframes cover-reveal {
+  from { clip-path: inset(0 0 100% 0); }
+  to   { clip-path: inset(0); }
+}
+/* Skate: the title is slapped on like a sticker, the tape pressed down after */
+.slap { animation: slap 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 300ms both; }
+@keyframes slap {
+  from { opacity: 0; transform: scale(1.6) rotate(-9deg); }
+  to   { opacity: 1; transform: none; }
+}
+.tape { animation: tape 360ms var(--ease-out) 650ms both; }
+@keyframes tape {
+  from { opacity: 0; transform: scale(1.3); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Skate stickers lift off the page, a corner peeling, under the pointer */
+.sticker::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(315deg, var(--paper) 50%, #d4d4d0 50%);
+  transform: scale(0);
+  transform-origin: bottom right;
+  transition: transform 220ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sticker { transition: transform 250ms var(--ease-out), box-shadow 250ms var(--ease-out); }
+  .sticker:hover { transform: translateY(-6px); box-shadow: 10px 12px 0 #111; }
+  .sticker:hover::after { transform: scale(1); }
+}
+
+/* Basketball player card: turns over to its stat sheet */
+.flip-card { perspective: 1600px; }
+.flip-inner { position: relative; transform-style: preserve-3d; transition: transform 650ms var(--ease-in-out); }
+.flip-card[data-flipped] .flip-inner { transform: rotateY(180deg); }
+.flip-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-back { position: absolute; inset: 0; transform: rotateY(180deg); }
+
 /* Running page: distance bar filling with page scroll, a marathon from top to bottom */
 .run-progress { transform: scaleX(0); }
 @supports (animation-timeline: scroll()) {
@@ -411,13 +517,22 @@ html:active-view-transition-type(filter)::view-transition-new(root) {
   .slip-line,
   .drawer-in,
   .card-in,
-  .label-in {
+  .label-in,
+  .run-sprint,
+  .board-on,
+  .tipoff,
+  .masthead-print,
+  .cover-reveal,
+  .slap,
+  .tape {
     animation: none !important;
   }
   /* Closing still needs animationend to unmount: make it instant, not absent */
   .drawer-out,
   .overlay-out { animation-duration: 1ms !important; }
   .press:active:not(:disabled) { transform: none; }
+  .flip-inner { transition: none; }
+  .sticker:hover { transform: none; }
   .tilt { transform: none !important; }
   .tile-zoom:hover img { transform: none; }
   .cell-lift:hover .cell-shoe { transform: none; }

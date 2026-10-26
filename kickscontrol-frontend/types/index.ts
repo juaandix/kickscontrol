@@ -34,6 +34,8 @@ export interface Product {
   description: string
   gender: string
   category: string
+  /** Shoes or clothing; older API responses omit it and mean footwear */
+  productType?: 'FOOTWEAR' | 'APPAREL'
   basePrice: number
   imageUrl: string | null
   isActive: boolean
@@ -84,6 +86,7 @@ export interface ProductFilters {
   search?: string
   brand?: string
   category?: string
+  type?: string
   gender?: string
   minPrice?: number
   maxPrice?: number
@@ -91,4 +94,6 @@ export interface ProductFilters {
   inStock?: boolean
   page?: number
   size_page?: number
+  sortBy?: string
+  sortDir?: 'asc' | 'desc'
 }

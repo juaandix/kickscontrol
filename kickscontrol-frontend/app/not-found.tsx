@@ -14,9 +14,9 @@ export default function NotFound() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-xl font-extrabold text-ink">Página no encontrada</h1>
+          <h1 className="text-xl font-extrabold text-ink">Esta referencia no está en el almacén</h1>
           <p className="text-sm text-ink-soft">
-            La URL que buscas no existe o ha sido movida. Puede que el producto se haya dado de baja.
+            Hemos mirado en todas las estanterías: la página no existe o el producto se ha dado de baja.
           </p>
         </div>
 

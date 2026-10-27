@@ -10,16 +10,19 @@ import {
   type VariantRequestDto,
 } from '@/lib/admin'
 import type { Product } from '@/types'
-import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { APPAREL_SIZES, GENDER_LABEL, PRODUCT_TYPE_LABEL, SIZE_RUN, sortSizes } from '@/lib/sheet'
+import { CATEGORY_THEMES } from '@/lib/categories'
+import { Modal, FormError, btnGhost, btnPrimary, btnIcon, inputCls, labelCls } from './ui'
 
 interface Props {
   product?: Product | null
   onClose: () => void
 }
 
-const GENDERS = ['HOMBRE', 'MUJER', 'UNISEX', 'NIÑO']
-const CATEGORIES = ['RUNNING', 'BASKETBALL', 'LIFESTYLE', 'TRAINING', 'SKATE']
-const SIZES = ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48']
+// The values the store filters by: gender codes from the API, categories with their own page
+const GENDERS = Object.keys(GENDER_LABEL)
+const CATEGORIES = CATEGORY_THEMES.map(c => c.name)
 
 interface VariantRow extends VariantRequestDto {
   _key: number
@@ -42,8 +45,8 @@ export function ProductFormModal({ product, onClose }: Props) {
     name: product?.name ?? '',
     brand: product?.brand ?? '',
     description: product?.description ?? '',
-    gender: product?.gender ?? 'HOMBRE',
-    category: product?.category ?? 'LIFESTYLE',
+    gender: product?.gender ?? 'UNISEX',
+    category: product?.category ?? 'Lifestyle',
     productType: product?.productType ?? 'FOOTWEAR',
     basePrice: product?.basePrice ?? 0,
     imageUrl: product?.imageUrl ?? '',
@@ -92,11 +95,18 @@ export function ProductFormModal({ product, onClose }: Props) {
     setForm(prev => ({ ...prev, [k]: v }))
   }
 
+  const sizes = form.productType === 'APPAREL' ? APPAREL_SIZES : SIZE_RUN
+  // A size and colour already on the shelf (or queued) can't be added twice
+  const taken = new Set([...(product?.variants ?? []), ...pendingVariants].map(v => `${v.color.toLowerCase()}|${v.size}`))
+  const duplicate = !!variantForm.size && !!variantForm.color && taken.has(`${variantForm.color.trim().toLowerCase()}|${variantForm.size}`)
+  const canAdd = !!variantForm.size && !!variantForm.color.trim() && !!variantForm.sku.trim() && !duplicate
+
   function addVariant() {
-    if (!variantForm.size || !variantForm.color || !variantForm.sku) return
+    if (!canAdd) return
     setPendingVariants(prev => [...prev, { ...variantForm, _key: variantKey }])
     setVariantKey(k => k + 1)
-    setVariantForm(emptyVariant())
+    // Keep the colourway and stock: the next row is usually the next size of the same box run
+    setVariantForm(p => ({ ...emptyVariant(), color: p.color, stockQuantity: p.stockQuantity, priceModifier: p.priceModifier }))
   }
 
   function removeVariant(key: number) {
@@ -114,66 +124,36 @@ export function ProductFormModal({ product, onClose }: Props) {
       setError('Añade al menos una variante al producto.')
       return
     }
-    isEdit ? updateMutation.mutate() : createMutation.mutate()
+    if (isEdit) updateMutation.mutate()
+    else createMutation.mutate()
   }
 
-  const inputCls =
-    'w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-400'
-  const labelCls = 'block text-xs font-semibold text-neutral-600 uppercase tracking-wide mb-1'
+
+  const bySize = (a: string, b: string) => { const run = sortSizes([a, b]); return run.indexOf(a) - run.indexOf(b) }
+  const existing = [...(product?.variants ?? [])].sort((a, b) => a.color.localeCompare(b.color) || bySize(a.size, b.size))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 shrink-0">
-          <h2 className="text-lg font-black text-neutral-900">
-            {isEdit ? `Editar · ${product.name}` : 'Nuevo producto'}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-6 space-y-8">
-
-          {/* ── Datos del producto ── */}
+    <Modal wide title={isEdit ? product.name : 'Nuevo producto'} kicker={isEdit ? `Editar · ${product.brand}` : 'Alta en almacén'} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex-1 space-y-8 overflow-y-auto px-5 py-5">
           <section className="space-y-4">
-            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-              Datos del producto
-            </h3>
+            <h3 className="type-label text-ink-soft">01 · Ficha del producto</h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className={labelCls}>Nombre *</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={e => setField('name', e.target.value)}
-                  placeholder="Nike Air Max 90"
-                  className={inputCls}
-                />
+                <label htmlFor="pf-name" className={labelCls}>Nombre *</label>
+                <input id="pf-name" type="text" value={form.name} onChange={e => setField('name', e.target.value)} placeholder="Nike Air Max 90" className={inputCls} />
               </div>
 
               <div>
-                <label className={labelCls}>Marca *</label>
-                <input
-                  type="text"
-                  value={form.brand}
-                  onChange={e => setField('brand', e.target.value)}
-                  placeholder="Nike"
-                  className={inputCls}
-                />
+                <label htmlFor="pf-brand" className={labelCls}>Marca *</label>
+                <input id="pf-brand" type="text" value={form.brand} onChange={e => setField('brand', e.target.value)} placeholder="Nike" className={inputCls} />
               </div>
 
               <div>
-                <label className={labelCls}>Precio base (€) *</label>
+                <label htmlFor="pf-price" className={labelCls}>Precio base (€) *</label>
                 <input
+                  id="pf-price"
                   type="number"
                   min="0"
                   step="0.01"
@@ -185,246 +165,159 @@ export function ProductFormModal({ product, onClose }: Props) {
               </div>
 
               <div>
-                <label className={labelCls}>Género</label>
+                <label htmlFor="pf-type" className={labelCls}>Tipo</label>
                 <select
-                  value={form.gender}
-                  onChange={e => setField('gender', e.target.value)}
+                  id="pf-type"
+                  value={form.productType}
+                  onChange={e => setField('productType', e.target.value as ProductRequestDto['productType'])}
                   className={inputCls}
+                  disabled={isEdit && (product.variants?.length ?? 0) > 0}
                 >
-                  {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
+                  {Object.entries(PRODUCT_TYPE_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </div>
 
               <div>
-                <label className={labelCls}>Categoría</label>
-                <select
-                  value={form.category}
-                  onChange={e => setField('category', e.target.value)}
-                  className={inputCls}
-                >
+                <label htmlFor="pf-category" className={labelCls}>Categoría</label>
+                <select id="pf-category" value={form.category} onChange={e => setField('category', e.target.value)} className={inputCls}>
+                  {/* An older product may carry a category the store no longer lists; keep it selectable */}
+                  {!CATEGORIES.includes(form.category) && <option value={form.category}>{form.category}</option>}
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 
               <div>
-                <label className={labelCls}>Tipo</label>
-                <select
-                  value={form.productType}
-                  onChange={e => setField('productType', e.target.value as ProductRequestDto['productType'])}
-                  className={inputCls}
-                >
-                  <option value="FOOTWEAR">Calzado</option>
-                  <option value="APPAREL">Ropa</option>
+                <label htmlFor="pf-gender" className={labelCls}>Género</label>
+                <select id="pf-gender" value={form.gender} onChange={e => setField('gender', e.target.value)} className={inputCls}>
+                  {!GENDERS.includes(form.gender) && <option value={form.gender}>{form.gender}</option>}
+                  {GENDERS.map(g => <option key={g} value={g}>{GENDER_LABEL[g]}</option>)}
                 </select>
               </div>
 
-              <div className="sm:col-span-2">
-                <label className={labelCls}>URL de imagen</label>
-                <input
-                  type="url"
-                  value={form.imageUrl}
-                  onChange={e => setField('imageUrl', e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className={inputCls}
-                />
+              <div>
+                <label htmlFor="pf-image" className={labelCls}>URL de imagen</label>
+                <input id="pf-image" type="url" value={form.imageUrl} onChange={e => setField('imageUrl', e.target.value)} placeholder="https://…" className={inputCls} />
               </div>
 
               <div className="sm:col-span-2">
-                <label className={labelCls}>Descripción</label>
+                <label htmlFor="pf-description" className={labelCls}>Descripción</label>
                 <textarea
+                  id="pf-description"
                   value={form.description}
                   onChange={e => setField('description', e.target.value)}
                   rows={3}
-                  placeholder="Describe el producto..."
-                  className={`${inputCls} resize-none`}
+                  placeholder="Lo que contarías en tienda: materiales, horma, para qué sirve."
+                  className={`${inputCls} h-auto resize-none py-2.5`}
                 />
               </div>
             </div>
           </section>
 
-          {/* ── Variantes ── */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                Variantes{!isEdit && ' *'}
-              </h3>
-              {isEdit && (
-                <span className="text-xs text-neutral-400">
-                  El stock de variantes existentes se ajusta desde la tabla de inventario
-                </span>
-              )}
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="type-label text-ink-soft">02 · Cajas{!isEdit && ' *'}</h3>
+              {isEdit && <p className="text-xs text-ink-soft">El stock de las cajas existentes se ajusta desde la matriz del inventario.</p>}
             </div>
 
-            {/* Existing variants (edit mode only) */}
-            {isEdit && (product.variants?.length ?? 0) > 0 && (
-              <div className="rounded-xl border border-neutral-200 overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead className="bg-neutral-50 text-neutral-400 font-semibold uppercase">
-                    <tr>
-                      <th className="text-left px-3 py-2">Talla</th>
-                      <th className="text-left px-3 py-2">Color</th>
-                      <th className="text-left px-3 py-2 hidden sm:table-cell">SKU</th>
-                      <th className="text-right px-3 py-2">Stock</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {product.variants!.map(v => (
-                      <tr key={v.id} className="text-neutral-700">
-                        <td className="px-3 py-2 font-bold">{v.size}</td>
-                        <td className="px-3 py-2">{v.color}</td>
-                        <td className="px-3 py-2 font-mono text-neutral-400 hidden sm:table-cell">{v.sku}</td>
-                        <td className="px-3 py-2 text-right">{v.stockQuantity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {isEdit && existing.length > 0 && (
+              <VariantTable rows={existing.map(v => ({ key: `e${v.id}`, ...v }))} />
             )}
 
-            {/* Pending new variants */}
             {pendingVariants.length > 0 && (
-              <div className="rounded-xl border border-orange-200 bg-orange-50 overflow-hidden">
-                <p className="text-xs font-semibold text-orange-600 px-3 pt-3 pb-1">
-                  {pendingVariants.length} variante{pendingVariants.length > 1 ? 's' : ''} a crear
+              <div>
+                <p className="type-label mb-1.5">
+                  {pendingVariants.length} {pendingVariants.length > 1 ? 'cajas nuevas' : 'caja nueva'} al guardar
                 </p>
-                <table className="w-full text-xs">
-                  <thead className="text-orange-400 font-semibold uppercase">
-                    <tr>
-                      <th className="text-left px-3 py-1.5">Talla</th>
-                      <th className="text-left px-3 py-1.5">Color</th>
-                      <th className="text-left px-3 py-1.5 hidden sm:table-cell">SKU</th>
-                      <th className="text-right px-3 py-1.5">Stock</th>
-                      <th className="px-3 py-1.5" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-orange-100">
-                    {pendingVariants.map(v => (
-                      <tr key={v._key}>
-                        <td className="px-3 py-2 font-bold">{v.size}</td>
-                        <td className="px-3 py-2">{v.color}</td>
-                        <td className="px-3 py-2 font-mono text-neutral-400 hidden sm:table-cell">{v.sku}</td>
-                        <td className="px-3 py-2 text-right">{v.stockQuantity}</td>
-                        <td className="px-3 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => removeVariant(v._key)}
-                            className="text-red-400 hover:text-red-600 transition-colors"
-                          >
-                            <TrashIcon className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <VariantTable rows={pendingVariants.map(v => ({ key: `p${v._key}`, ...v }))} onRemove={k => removeVariant(Number(k.slice(1)))} highlight />
               </div>
             )}
 
-            {/* Add variant form */}
-            <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 space-y-3">
-              <p className="text-xs font-semibold text-neutral-500">Añadir variante</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="border border-dashed border-ink/30 p-4">
+              <p className="type-field mb-3">Añadir caja</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="text-xs text-neutral-500 mb-1 block">Talla</label>
-                  <select
-                    value={variantForm.size}
-                    onChange={e => setVariantForm(p => ({ ...p, size: e.target.value }))}
-                    className="w-full rounded-lg border border-neutral-200 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  >
+                  <label htmlFor="vf-size" className={labelCls}>Talla</label>
+                  <select id="vf-size" value={variantForm.size} onChange={e => setVariantForm(p => ({ ...p, size: e.target.value }))} className={inputCls}>
                     <option value="">— Elige —</option>
-                    {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                    {sizes.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
-
                 <div>
-                  <label className="text-xs text-neutral-500 mb-1 block">Color</label>
-                  <input
-                    type="text"
-                    value={variantForm.color}
-                    onChange={e => setVariantForm(p => ({ ...p, color: e.target.value }))}
-                    placeholder="Negro"
-                    className="w-full rounded-lg border border-neutral-200 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  />
+                  <label htmlFor="vf-color" className={labelCls}>Color</label>
+                  <input id="vf-color" type="text" value={variantForm.color} onChange={e => setVariantForm(p => ({ ...p, color: e.target.value }))} placeholder="White/Black" className={inputCls} />
                 </div>
-
                 <div>
-                  <label className="text-xs text-neutral-500 mb-1 block">SKU</label>
-                  <input
-                    type="text"
-                    value={variantForm.sku}
-                    onChange={e => setVariantForm(p => ({ ...p, sku: e.target.value }))}
-                    placeholder="NK-AM90-42-NGR"
-                    className="w-full rounded-lg border border-neutral-200 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  />
+                  <label htmlFor="vf-sku" className={labelCls}>SKU</label>
+                  <input id="vf-sku" type="text" value={variantForm.sku} onChange={e => setVariantForm(p => ({ ...p, sku: e.target.value.toUpperCase() }))} placeholder="NK-AM90-42-WB" className={`${inputCls} type-label text-[0.8125rem]`} />
                 </div>
-
                 <div>
-                  <label className="text-xs text-neutral-500 mb-1 block">Stock inicial</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={variantForm.stockQuantity}
-                    onChange={e => setVariantForm(p => ({ ...p, stockQuantity: parseInt(e.target.value) || 0 }))}
-                    className="w-full rounded-lg border border-neutral-200 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  />
+                  <label htmlFor="vf-stock" className={labelCls}>Stock inicial</label>
+                  <input id="vf-stock" type="number" min="0" value={variantForm.stockQuantity} onChange={e => setVariantForm(p => ({ ...p, stockQuantity: parseInt(e.target.value) || 0 }))} className={inputCls} />
                 </div>
-
                 <div>
-                  <label className="text-xs text-neutral-500 mb-1 block">Mod. precio (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={variantForm.priceModifier}
-                    onChange={e => setVariantForm(p => ({ ...p, priceModifier: parseFloat(e.target.value) || 0 }))}
-                    className="w-full rounded-lg border border-neutral-200 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  />
+                  <label htmlFor="vf-mod" className={labelCls}>Suplemento (€)</label>
+                  <input id="vf-mod" type="number" step="0.01" value={variantForm.priceModifier} onChange={e => setVariantForm(p => ({ ...p, priceModifier: parseFloat(e.target.value) || 0 }))} className={inputCls} />
                 </div>
-
                 <div className="flex items-end">
-                  <button
-                    type="button"
-                    onClick={addVariant}
-                    disabled={!variantForm.size || !variantForm.color || !variantForm.sku}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <PlusIcon className="w-4 h-4" />
+                  <button type="button" onClick={addVariant} disabled={!canAdd} className={`${btnGhost} w-full`}>
+                    <PlusIcon className="size-4" />
                     Añadir
                   </button>
                 </div>
               </div>
+              {duplicate && <p className="mt-2 text-xs text-alarm">Ya hay una caja de la talla {variantForm.size} en {variantForm.color}.</p>}
             </div>
           </section>
 
-          {/* Error */}
-          {error && (
-            <p className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-              {error}
-            </p>
-          )}
+          {error && <FormError>{error}</FormError>}
+        </div>
 
-          {/* Footer buttons */}
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition-colors"
-            >
-              {isPending
-                ? 'Guardando...'
-                : isEdit
-                  ? 'Guardar cambios'
-                  : 'Crear producto'}
-            </button>
-          </div>
-        </form>
-      </div>
+        <div className="flex justify-end gap-2 border-t border-form-rule px-5 py-4">
+          <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
+          <button type="submit" disabled={isPending} className={btnPrimary}>
+            {isPending ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function VariantTable({ rows, onRemove, highlight = false }: {
+  rows: (Pick<VariantRequestDto, 'size' | 'color' | 'sku' | 'stockQuantity'> & { key: string })[]
+  onRemove?: (key: string) => void
+  highlight?: boolean
+}) {
+  return (
+    <div className={`overflow-x-auto border ${highlight ? 'border-ink' : 'border-form-rule'}`}>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-form-rule text-left">
+            <th className="type-field px-3 py-2 font-semibold">Talla</th>
+            <th className="type-field px-3 py-2 font-semibold">Color</th>
+            <th className="type-field hidden px-3 py-2 font-semibold sm:table-cell">SKU</th>
+            <th className="type-field px-3 py-2 text-right font-semibold">Uds</th>
+            {onRemove && <th className="px-3 py-2"><span className="sr-only">Quitar</span></th>}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-form-rule">
+          {rows.map(v => (
+            <tr key={v.key}>
+              <td className="type-label px-3 py-2 text-[0.8125rem] font-bold">{v.size}</td>
+              <td className="px-3 py-2">{v.color}</td>
+              <td className="type-label hidden px-3 py-2 text-ink-soft sm:table-cell">{v.sku}</td>
+              <td className="type-label px-3 py-2 text-right text-[0.8125rem]">{v.stockQuantity}</td>
+              {onRemove && (
+                <td className="px-2 py-1 text-right">
+                  <button type="button" onClick={() => onRemove(v.key)} className={`${btnIcon} hover:text-alarm`} aria-label={`Quitar talla ${v.size} ${v.color}`}>
+                    <TrashIcon className="size-3.5" />
+                  </button>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

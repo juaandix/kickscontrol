@@ -1,19 +1,14 @@
 'use client'
 
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import type { OrderStatusCountDto } from '@/lib/analytics'
+import { Panel } from './ui'
 
 interface Props {
   data: OrderStatusCountDto[]
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#fbbf24',
-  CONFIRMED: '#60a5fa',
-  SHIPPED: '#a78bfa',
-  DELIVERED: '#34d399',
-  CANCELLED: '#f87171',
-}
+// In the order a parcel moves through the shop; cancelled last
+const FLOW = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendiente',
@@ -23,45 +18,35 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelado',
 }
 
+/** Orders by status as a ruled tally: one bar per status, all against the same total. */
 export function OrdersStatusPieChart({ data }: Props) {
-  const chartData = data.map((d) => ({
-    name: STATUS_LABELS[d.status] ?? d.status,
-    value: Number(d.count),
-    status: d.status,
-  }))
+  const counts = new Map(data.map(d => [d.status, Number(d.count)]))
+  const total = [...counts.values()].reduce((s, n) => s + n, 0)
+  const rows = FLOW.filter(s => counts.has(s)).map(s => ({ status: s, count: counts.get(s)! }))
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 p-5">
-      <h3 className="text-sm font-bold text-neutral-700 mb-2">Pedidos por estado</h3>
-      <ResponsiveContainer width="100%" height={240}>
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="45%"
-            innerRadius={55}
-            outerRadius={85}
-            paddingAngle={3}
-            dataKey="value"
-          >
-            {chartData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={STATUS_COLORS[entry.status] ?? '#d1d5db'}
-              />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(v) => [`${Number(v ?? 0)} pedidos`]}
-            contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }}
-          />
-          <Legend
-            iconType="circle"
-            iconSize={8}
-            formatter={(value) => <span style={{ fontSize: 11, color: '#6b7280' }}>{value}</span>}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
+    <Panel title="Pedidos por estado" aside={`${total.toLocaleString('es-ES')} en total`}>
+      <ul className="divide-y divide-form-rule">
+        {rows.map(r => {
+          const share = total ? (r.count / total) * 100 : 0
+          return (
+            <li key={r.status} className="px-4 py-3 sm:px-5">
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className={r.status === 'CANCELLED' ? 'text-ink-soft' : 'font-medium'}>{STATUS_LABELS[r.status] ?? r.status}</span>
+                <span className="type-label tabular-nums">
+                  {r.count.toLocaleString('es-ES')} <span className="text-ink-soft">· {share.toFixed(0)}%</span>
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 bg-form-wash" aria-hidden>
+                <div
+                  className={r.status === 'CANCELLED' ? 'h-full bg-alarm' : r.status === 'PENDING' ? 'h-full bg-ink-soft' : 'h-full bg-ink'}
+                  style={{ width: `${Math.max(share, 0.75)}%` }}
+                />
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </Panel>
   )
 }

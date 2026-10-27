@@ -64,8 +64,9 @@ test.describe('Backoffice', () => {
     await page.locator('a', { hasText: 'Pedidos' }).click()
     await page.waitForLoadState('networkidle')
     await expect(page.locator('h1', { hasText: 'Pedidos' })).toBeVisible({ timeout: 5000 })
-    // Status filter dropdown should exist
-    await expect(page.locator('select')).toBeVisible()
+    // Status filter tabs should exist
+    await expect(page.getByRole('tablist', { name: 'Filtrar por estado' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Pendiente/ })).toBeVisible()
   })
 
   test('users page loads user table', async ({ page }) => {

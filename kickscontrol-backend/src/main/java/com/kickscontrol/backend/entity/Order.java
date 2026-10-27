@@ -2,6 +2,7 @@ package com.kickscontrol.backend.entity;
 
 import com.kickscontrol.backend.entity.enums.OrderStatus;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -44,6 +45,8 @@ public class Order {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    // A page of orders loads its items in a few IN queries instead of one per order
+    @BatchSize(size = 50)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
 

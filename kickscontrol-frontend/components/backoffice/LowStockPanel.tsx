@@ -1,97 +1,97 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { adminGetLowStock } from '@/lib/admin'
-import { ExclamationTriangleIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline'
+import { adminFetchProducts, adminGetLowStock } from '@/lib/admin'
+import { LOW_STOCK } from '@/lib/sheet'
+import type { ProductVariant } from '@/types'
+import { StockAdjustModal } from './StockAdjustModal'
+import { Panel, Skeleton, Units } from './ui'
 
+const PREVIEW = 8
+
+/** "Nike Air Max 90", but not "Jordan Air Jordan 11" when the brand is already in the name. */
+export const fullName = (p: { brand: string; name: string }) =>
+  p.name.toLowerCase().includes(p.brand.toLowerCase()) ? p.name : `${p.brand} ${p.name}`
+
+/** The restock list: every variant at or under the low-stock line, emptiest shelf first. */
 export function LowStockPanel() {
+  const [showAll, setShowAll] = useState(false)
+  const [adjust, setAdjust] = useState<(ProductVariant & { productName: string }) | null>(null)
+
   const { data: variants = [], isLoading } = useQuery({
     queryKey: ['low-stock'],
-    queryFn: () => adminGetLowStock(5),
+    queryFn: () => adminGetLowStock(LOW_STOCK),
     refetchInterval: 60_000,
   })
+  // The alerts endpoint returns bare variants; the inventory list names them
+  const { data: products = [] } = useQuery({ queryKey: ['admin-products'], queryFn: adminFetchProducts })
 
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-2xl border border-neutral-200 p-5 space-y-3">
-        <div className="h-5 w-40 bg-neutral-200 rounded animate-pulse" />
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-10 bg-neutral-100 rounded-xl animate-pulse" />
-        ))}
-      </div>
-    )
-  }
+  const rows = useMemo(() => {
+    const owner = new Map<number, string>()
+    for (const p of products) for (const v of p.variants ?? []) owner.set(v.id, fullName(p))
+    return [...variants]
+      .sort((a, b) => a.stockQuantity - b.stockQuantity)
+      .map(v => ({ ...v, productName: owner.get(v.id) ?? v.sku }))
+  }, [variants, products])
 
-  if (variants.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl border border-neutral-200 p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <ExclamationTriangleIcon className="w-5 h-5 text-neutral-400" />
-          <h3 className="font-bold text-neutral-700">Alertas de stock bajo</h3>
-        </div>
-        <p className="text-sm text-neutral-400">Sin variantes críticas ≤ 5 uds. ✓</p>
-      </div>
-    )
-  }
+  const empty = rows.filter(v => v.stockQuantity === 0).length
+  const shown = showAll ? rows : rows.slice(0, PREVIEW)
 
   return (
-    <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-amber-50 border-b border-amber-100">
-        <div className="flex items-center gap-2">
-          <ExclamationTriangleIcon className="w-5 h-5 text-amber-500" />
-          <h3 className="font-bold text-amber-800">Stock bajo</h3>
-          <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-            {variants.length}
-          </span>
+    <Panel
+      title="Lista de reposición"
+      aside={isLoading ? null : rows.length === 0 ? `Nada ≤ ${LOW_STOCK} uds` : `${rows.length} variantes · ${empty} agotadas`}
+    >
+      {isLoading ? (
+        <div className="space-y-2 p-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
         </div>
-        <span className="text-xs text-amber-600">Variantes con ≤ 5 uds.</span>
-      </div>
+      ) : rows.length === 0 ? (
+        <p className="px-5 py-8 text-sm text-ink-soft">Todas las tallas están por encima de {LOW_STOCK} unidades. Nada que reponer.</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-form-rule text-left">
+                  <th className="type-field px-4 py-2 font-semibold sm:px-5">Producto</th>
+                  <th className="type-field px-3 py-2 font-semibold">Talla</th>
+                  <th className="type-field hidden px-3 py-2 font-semibold md:table-cell">Color</th>
+                  <th className="type-field hidden px-3 py-2 font-semibold xl:table-cell">SKU</th>
+                  <th className="type-field px-3 py-2 text-right font-semibold">Uds</th>
+                  <th className="px-4 py-2 sm:px-5"><span className="sr-only">Acción</span></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-form-rule">
+                {shown.map(v => (
+                  <tr key={v.id} className="hover:bg-form-wash">
+                    <td className="max-w-[16rem] truncate px-4 py-2.5 font-medium sm:px-5">{v.productName}</td>
+                    <td className="type-label px-3 py-2.5 text-[0.8125rem]">{v.size}</td>
+                    <td className="hidden px-3 py-2.5 whitespace-nowrap text-ink-soft md:table-cell">{v.color}</td>
+                    <td className="type-label hidden px-3 py-2.5 whitespace-nowrap text-ink-soft xl:table-cell">{v.sku}</td>
+                    <td className="px-3 py-2.5 text-right">
+                      {v.stockQuantity === 0 ? <span className="type-label font-bold text-alarm">Agotado</span> : <Units n={v.stockQuantity} />}
+                    </td>
+                    <td className="px-4 py-2.5 text-right sm:px-5">
+                      <button onClick={() => setAdjust(v)} className="press type-label border border-form-rule px-2.5 py-1.5 hover:border-ink">
+                        Reponer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {rows.length > PREVIEW && (
+            <button onClick={() => setShowAll(s => !s)} className="type-label w-full border-t border-form-rule px-5 py-3 text-left hover:bg-form-wash">
+              {showAll ? 'Ver menos' : `Ver las ${rows.length} variantes`}
+            </button>
+          )}
+        </>
+      )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 border-b border-neutral-100">
-            <tr>
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wide">Variante</th>
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wide hidden sm:table-cell">SKU</th>
-              <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-500 uppercase tracking-wide">Stock</th>
-              <th className="px-4 py-2.5" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-50">
-            {variants.map(v => (
-              <tr key={v.id} className="hover:bg-neutral-50">
-                <td className="px-4 py-3">
-                  <p className="font-semibold text-neutral-800">{v.size} · {v.color}</p>
-                </td>
-                <td className="px-4 py-3 text-neutral-400 font-mono text-xs hidden sm:table-cell">{v.sku}</td>
-                <td className="px-4 py-3 text-right">
-                  <span
-                    className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-black ${
-                      v.stockQuantity === 0
-                        ? 'bg-red-100 text-red-600'
-                        : v.stockQuantity <= 2
-                          ? 'bg-orange-100 text-orange-600'
-                          : 'bg-amber-100 text-amber-700'
-                    }`}
-                  >
-                    {v.stockQuantity}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors"
-                    title="Ajustar stock"
-                  >
-                    <AdjustmentsHorizontalIcon className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      {adjust && <StockAdjustModal variant={adjust} onClose={() => setAdjust(null)} />}
+    </Panel>
   )
 }

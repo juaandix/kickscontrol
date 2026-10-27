@@ -4,8 +4,18 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminAdjustStock } from '@/lib/admin'
 import type { ProductVariant } from '@/types'
+import { Barcode } from '@/components/brand/Barcode'
+import { Modal, FormError, btnGhost, btnPrimary, inputCls, labelCls } from './ui'
 
-const REASONS = ['RECEPCIÓN', 'AJUSTE', 'MERMA', 'DEVOLUCIÓN']
+// Why units come in or go out on the shop floor; a loss counts against the shelf
+const REASONS = [
+  { value: 'RECEPCIÓN', label: 'Recepción', sign: 1 },
+  { value: 'DEVOLUCIÓN', label: 'Devolución', sign: 1 },
+  { value: 'AJUSTE', label: 'Recuento', sign: 0 },
+  { value: 'MERMA', label: 'Merma', sign: -1 },
+]
+
+const STEPS = [-5, -1, 1, 5, 12]
 
 interface Props {
   variant: ProductVariant & { productName?: string }
@@ -14,7 +24,7 @@ interface Props {
 
 export function StockAdjustModal({ variant, onClose }: Props) {
   const [delta, setDelta] = useState(0)
-  const [reason, setReason] = useState(REASONS[0])
+  const [reason, setReason] = useState(REASONS[0].value)
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
@@ -22,88 +32,78 @@ export function StockAdjustModal({ variant, onClose }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] })
       queryClient.invalidateQueries({ queryKey: ['low-stock'] })
+      queryClient.invalidateQueries({ queryKey: ['analytics-summary'] })
       onClose()
     },
   })
 
   const newStock = variant.stockQuantity + delta
-  const isValid = delta !== 0 && newStock >= 0
+  const sign = REASONS.find(r => r.value === reason)?.sign ?? 0
+  const signMismatch = delta !== 0 && sign !== 0 && Math.sign(delta) !== sign
+  const isValid = delta !== 0 && newStock >= 0 && !signMismatch
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
-        <h2 className="text-lg font-bold text-neutral-900 mb-1">Ajuste de stock</h2>
-        <p className="text-sm text-neutral-500 mb-6">
-          {variant.productName ?? ''} — {variant.size} / {variant.color}
-          <span className="ml-2 font-mono text-xs bg-neutral-100 px-1.5 py-0.5 rounded">{variant.sku}</span>
-        </p>
-
-        <div className="space-y-4">
-          {/* Stock visual */}
-          <div className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3">
-            <div className="text-center">
-              <p className="text-xs text-neutral-400">Actual</p>
-              <p className="text-xl font-bold text-neutral-900">{variant.stockQuantity}</p>
-            </div>
-            <div className="text-2xl text-neutral-300">→</div>
-            <div className="text-center">
-              <p className="text-xs text-neutral-400">Nuevo</p>
-              <p className={`text-xl font-bold ${newStock < 0 ? 'text-red-500' : 'text-orange-500'}`}>
-                {newStock}
-              </p>
-            </div>
+    <Modal title={variant.productName ?? 'Ajuste de stock'} kicker="Ajuste de stock" onClose={onClose}>
+      <div className="space-y-5 overflow-y-auto px-5 py-5">
+        {/* The box end label of the variant being counted */}
+        <div className="flex items-center justify-between gap-4 border border-ink px-4 py-3">
+          <div className="min-w-0">
+            <p className="type-label">Talla {variant.size} · {variant.color}</p>
+            <p className="type-label mt-1 text-ink-soft">{variant.sku}</p>
           </div>
-
-          {/* Delta */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Cantidad (positivo = entrada, negativo = salida)
-            </label>
-            <input
-              type="number"
-              value={delta}
-              onChange={e => setDelta(Number(e.target.value))}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-
-          {/* Reason */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Motivo</label>
-            <select
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-            >
-              {REASONS.map(r => <option key={r}>{r}</option>)}
-            </select>
-          </div>
-
-          {newStock < 0 && (
-            <p className="text-xs text-red-500">El stock resultante no puede ser negativo.</p>
-          )}
-
-          {mutation.isError && (
-            <p className="text-xs text-red-500">Error al ajustar el stock. Inténtalo de nuevo.</p>
-          )}
+          <Barcode code={variant.sku} className="h-8" />
         </div>
 
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 rounded-lg border border-neutral-300 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => mutation.mutate()}
-            disabled={!isValid || mutation.isPending}
-            className="flex-1 py-2 rounded-lg bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {mutation.isPending ? 'Guardando...' : 'Confirmar ajuste'}
-          </button>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center text-center">
+          <div>
+            <p className="type-field">En estantería</p>
+            <p className="type-name mt-1 text-3xl tabular-nums">{variant.stockQuantity}</p>
+          </div>
+          <span className="type-label text-ink-soft" aria-hidden>→</span>
+          <div>
+            <p className="type-field">Tras el ajuste</p>
+            <p className={`type-name mt-1 text-3xl tabular-nums ${newStock < 0 ? 'text-alarm' : ''}`}>{newStock}</p>
+          </div>
         </div>
+
+        <div>
+          <label htmlFor="adjust-delta" className={labelCls}>Unidades (+ entran, − salen)</label>
+          <div className="flex gap-2">
+            <input id="adjust-delta" type="number" value={delta} onChange={e => setDelta(Number(e.target.value))} className={`${inputCls} type-label text-sm`} />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {STEPS.map(s => (
+              <button key={s} type="button" onClick={() => setDelta(d => d + s)} className="press type-label h-8 border border-form-rule px-2.5 hover:border-ink">
+                {s > 0 ? `+${s}` : `−${-s}`}
+              </button>
+            ))}
+            <button type="button" onClick={() => setDelta(0)} className="press type-label h-8 px-2.5 text-ink-soft hover:text-ink">Borrar</button>
+          </div>
+        </div>
+
+        <fieldset>
+          <legend className={labelCls}>Motivo</legend>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            {REASONS.map(r => (
+              <label key={r.value} className={`press flex h-10 cursor-pointer items-center justify-center border text-sm font-medium ${reason === r.value ? 'border-ink bg-ink text-paper' : 'border-form-rule hover:border-ink'}`}>
+                <input type="radio" name="reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="sr-only" />
+                {r.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {newStock < 0 && <FormError>No puedes sacar más unidades de las que hay en la estantería.</FormError>}
+        {signMismatch && <FormError>{sign > 0 ? 'Una recepción o devolución suma unidades.' : 'Una merma resta unidades.'}</FormError>}
+        {mutation.isError && <FormError>No se pudo guardar el ajuste. Inténtalo de nuevo.</FormError>}
       </div>
-    </div>
+
+      <div className="flex gap-2 border-t border-form-rule px-5 py-4">
+        <button type="button" onClick={onClose} className={`${btnGhost} flex-1`}>Cancelar</button>
+        <button type="button" onClick={() => mutation.mutate()} disabled={!isValid || mutation.isPending} className={`${btnPrimary} flex-1`}>
+          {mutation.isPending ? 'Guardando…' : 'Confirmar ajuste'}
+        </button>
+      </div>
+    </Modal>
   )
 }

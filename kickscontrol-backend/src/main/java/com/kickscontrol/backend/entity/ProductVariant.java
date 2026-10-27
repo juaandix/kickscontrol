@@ -1,6 +1,7 @@
 package com.kickscontrol.backend.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
     uniqueConstraints = @UniqueConstraint(columnNames = "sku")
 )
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@BatchSize(size = 50)
 public class ProductVariant {
 
     @Id

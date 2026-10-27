@@ -139,9 +139,10 @@ public class OrderServiceImpl implements OrderService {
     public Page<OrderResponseDto> getAllOrders(OrderStatus status, Pageable pageable) {
         if (status != null) {
             return orderRepository.findByStatusOrderByCreatedAtDesc(status, pageable)
-                    .map(OrderResponseDto::summary);
+                    .map(OrderResponseDto::from);
         }
-        return orderRepository.findAll(pageable).map(OrderResponseDto::summary);
+        // The backoffice list shows what each order holds; items are batch-fetched (see Order.items)
+        return orderRepository.findAll(pageable).map(OrderResponseDto::from);
     }
 
     @Override

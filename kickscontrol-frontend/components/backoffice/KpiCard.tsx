@@ -4,34 +4,27 @@ interface KpiCardProps {
   title: string
   value: string | number
   subtitle?: string
-  icon: React.ReactNode
-  accentColor?: string
+  /** Prints the figure in alarm red: something on the floor needs doing */
+  alert?: boolean
 }
 
-export function KpiCard({ title, value, subtitle, icon, accentColor = 'bg-orange-100 text-orange-600' }: KpiCardProps) {
+/** One cell of the shift report: field name, the figure, and how it is worked out. */
+export function KpiCard({ title, value, subtitle, alert = false }: KpiCardProps) {
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 p-5 flex items-start gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${accentColor}`}>
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide truncate">{title}</p>
-        <p className="text-2xl font-black text-neutral-900 mt-0.5 leading-tight">{value}</p>
-        {subtitle && <p className="text-xs text-neutral-400 mt-0.5">{subtitle}</p>}
-      </div>
+    <div className="bg-paper px-4 py-4 sm:px-5 sm:py-5">
+      <p className="type-field truncate">{title}</p>
+      <p className={`type-name mt-2 text-[1.625rem] tabular-nums sm:text-[2rem] ${alert ? 'text-alarm' : ''}`}>{value}</p>
+      {subtitle && <p className="type-label mt-2 text-[0.625rem] leading-snug text-ink-soft normal-case tracking-[0.02em]">{subtitle}</p>}
     </div>
   )
 }
 
 export function KpiCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 p-5 flex items-start gap-4 animate-pulse">
-      <div className="w-11 h-11 rounded-xl bg-neutral-200 shrink-0" />
-      <div className="flex-1 space-y-2 pt-1">
-        <div className="h-3 bg-neutral-200 rounded w-2/3" />
-        <div className="h-6 bg-neutral-200 rounded w-1/2" />
-        <div className="h-3 bg-neutral-200 rounded w-1/3" />
-      </div>
+    <div className="animate-pulse bg-paper px-4 py-4 sm:px-5 sm:py-5">
+      <div className="h-3 w-2/3 bg-form-wash" />
+      <div className="mt-3 h-7 w-1/2 bg-form-wash" />
+      <div className="mt-3 h-2.5 w-3/4 bg-form-wash" />
     </div>
   )
 }

@@ -24,7 +24,7 @@ Built by an ex Foot Locker Shift Leader: inventory is modeled per real variant (
 
 ## Capabilities and Constraints
 - Store: catalog with URL-persisted filters (search, brand, category, gender, size, price, in-stock), product detail with color/size variant selector and live per-variant stock, server-side persistent cart drawer, transactional checkout with simulated payment (card animation, PDF receipt), order history with status timeline, profile, login/register.
-- Backoffice (out of scope for the current redesign pass): inventory, orders, users, KPI dashboard.
+- Backoffice ("la trastienda", redesigned 2026-10-27 on the same white sheet): shift-report KPI grid, restock list with working adjust, inventory with a size × colour stock matrix per model, paginated orders with item detail, users.
 - Stack: Next.js 16 App Router, React 19, TypeScript strict, TanStack Query v5, Tailwind CSS 4, Heroicons, Recharts, jsPDF. Tests: Vitest + RTL, Playwright E2E.
 - Order statuses: PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED. Roles: USER, ADMIN, SHIFT_LEADER.
 

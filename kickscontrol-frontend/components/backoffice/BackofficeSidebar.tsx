@@ -3,75 +3,64 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import {
-  CubeIcon,
-  ChartBarIcon,
-  ShoppingBagIcon,
-  UsersIcon,
-  ArrowRightEndOnRectangleIcon,
-} from '@heroicons/react/24/outline'
+import { Wordmark } from '@/components/brand/Wordmark'
+import { ArrowRightEndOnRectangleIcon, ArrowUpRightIcon } from '@heroicons/react/24/outline'
 
 const NAV_ITEMS = [
-  { href: '/backoffice', label: 'Dashboard', icon: ChartBarIcon, exact: true },
-  { href: '/backoffice/inventory', label: 'Inventario', icon: CubeIcon, exact: false },
-  { href: '/backoffice/orders', label: 'Pedidos', icon: ShoppingBagIcon, exact: false },
-  { href: '/backoffice/users', label: 'Usuarios', icon: UsersIcon, exact: false },
+  { href: '/backoffice', label: 'Dashboard', code: '01', exact: true },
+  { href: '/backoffice/inventory', label: 'Inventario', code: '02', exact: false },
+  { href: '/backoffice/orders', label: 'Pedidos', code: '03', exact: false },
+  { href: '/backoffice/users', label: 'Usuarios', code: '04', exact: false },
 ]
 
+const ROLE_LABEL: Record<string, string> = { ADMIN: 'Admin', SHIFT_LEADER: 'Shift Leader', USER: 'Cliente' }
+
+/** Left rail on desktop, a top bar with a scrolling tab row on phones. */
 export function BackofficeSidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
 
   return (
-    <aside className="w-60 shrink-0 bg-neutral-900 text-white flex flex-col">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-neutral-700">
-        <Link href="/" className="text-sm font-black tracking-tight">
-          KICKS<span className="text-orange-500">CONTROL</span>
+    <aside className="sticky top-0 z-30 shrink-0 border-b border-form-rule bg-paper lg:flex lg:h-screen lg:w-60 lg:flex-col lg:border-r lg:border-b-0">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:block lg:px-5 lg:pt-6 lg:pb-5">
+        <Link href="/backoffice" className="block" aria-label="KicksControl, trastienda">
+          <Wordmark className="text-lg" />
+          <span className="type-label mt-1 hidden text-ink-soft lg:block">Trastienda · solo personal</span>
         </Link>
-        <p className="text-xs text-neutral-400 mt-0.5">Backoffice</p>
+        <button onClick={logout} className="type-label text-ink-soft hover:text-ink lg:hidden">Salir</button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav aria-label="Backoffice" className="flex gap-1 overflow-x-auto px-4 pb-2 sm:px-6 lg:flex-1 lg:flex-col lg:gap-0 lg:border-t lg:border-form-rule lg:px-0 lg:py-3">
         {NAV_ITEMS.map(item => {
-          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href) && pathname !== '/backoffice'
-          const isActive = item.exact ? pathname === item.href : active
+          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-orange-500 text-white'
-                  : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+              aria-current={active ? 'page' : undefined}
+              className={`press flex shrink-0 items-center gap-3 px-3 py-2 text-sm font-semibold lg:px-5 lg:py-2.5 ${
+                active ? 'bg-ink text-paper' : 'text-ink hover:bg-form-wash'
               }`}
             >
-              <item.icon className="w-5 h-5 shrink-0" />
+              <span className={`type-label hidden lg:inline ${active ? 'text-paper/60' : 'text-ink-soft'}`}>{item.code}</span>
               {item.label}
             </Link>
           )
         })}
+        <Link href="/" className="mt-auto hidden items-center gap-1.5 px-5 py-2.5 text-sm text-ink-soft hover:text-ink lg:flex">
+          Ir a la tienda
+          <ArrowUpRightIcon className="size-3.5" />
+        </Link>
       </nav>
 
-      {/* User */}
-      <div className="px-4 py-4 border-t border-neutral-700">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-sm font-bold">
-            {user?.firstName?.[0]?.toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</p>
-            <p className="text-xs text-neutral-400 truncate">{user?.role}</p>
-          </div>
-          <button
-            onClick={logout}
-            className="p-1.5 rounded hover:bg-neutral-800 text-neutral-400"
-            title="Cerrar sesión"
-          >
-            <ArrowRightEndOnRectangleIcon className="w-4 h-4" />
-          </button>
+      <div className="hidden items-center gap-3 border-t border-form-rule px-5 py-4 lg:flex">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{user?.firstName} {user?.lastName}</p>
+          <p className="type-label truncate text-ink-soft">{user ? ROLE_LABEL[user.role] ?? user.role : ''}</p>
         </div>
+        <button onClick={logout} className="press inline-flex size-8 items-center justify-center text-ink-soft hover:bg-form-wash hover:text-ink" title="Cerrar sesión" aria-label="Cerrar sesión">
+          <ArrowRightEndOnRectangleIcon className="size-4" />
+        </button>
       </div>
     </aside>
   )

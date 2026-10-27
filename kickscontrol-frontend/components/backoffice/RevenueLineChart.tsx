@@ -1,8 +1,8 @@
 'use client'
 
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -10,58 +10,63 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { RevenueDataPointDto } from '@/lib/analytics'
+import { Panel, Skeleton } from './ui'
 
 interface Props {
   data: RevenueDataPointDto[]
+  granularity?: 'day' | 'week' | 'month'
 }
+
+const TITLE = { day: 'Ingresos por día', week: 'Ingresos por semana', month: 'Ingresos por mes' }
 
 function formatCurrency(value: number) {
   return `€${value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
-export function RevenueLineChart({ data }: Props) {
+const shortDate = (iso: string) =>
+  new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+
+const axisTick = { fontSize: 10, fill: '#6b6b6b', fontFamily: 'var(--font-label), monospace' }
+
+export function RevenueLineChart({ data, granularity = 'day' }: Props) {
+  const total = data.reduce((s, d) => s + Number(d.revenue), 0)
+
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 p-5">
-      <h3 className="text-sm font-bold text-neutral-700 mb-4">Ingresos diarios</h3>
-      <ResponsiveContainer width="100%" height={220}>
-        <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis
-            dataKey="date"
-            tick={{ fontSize: 11, fill: '#9ca3af' }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            tickFormatter={formatCurrency}
-            tick={{ fontSize: 11, fill: '#9ca3af' }}
-            tickLine={false}
-            axisLine={false}
-            width={64}
-          />
-          <Tooltip
-            formatter={(v) => [formatCurrency(Number(v ?? 0)), 'Ingresos']}
-            contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="revenue"
-            stroke="#f97316"
-            strokeWidth={2.5}
-            dot={false}
-            activeDot={{ r: 5, fill: '#f97316' }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <Panel title={TITLE[granularity]} aside={`${formatCurrency(total)} en el periodo`}>
+      <div className="px-2 pt-4 pb-2 sm:px-4">
+        <ResponsiveContainer width="100%" height={240}>
+          <AreaChart data={data} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="revenue-wash" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#111111" stopOpacity={0.12} />
+                <stop offset="100%" stopColor="#111111" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="#e6e6e6" vertical={false} />
+            <XAxis dataKey="date" tickFormatter={shortDate} tick={axisTick} tickLine={false} axisLine={{ stroke: '#111111' }} minTickGap={24} />
+            <YAxis tickFormatter={formatCurrency} tick={axisTick} tickLine={false} axisLine={false} width={60} />
+            <Tooltip
+              formatter={(v, _n, p) => [
+                `${formatCurrency(Number(v ?? 0))} · ${(p as { payload?: { orders?: number } }).payload?.orders ?? 0} pedidos`,
+                'Ingresos',
+              ]}
+              labelFormatter={l => shortDate(String(l))}
+              contentStyle={{ borderRadius: 0, border: '1px solid #111111', fontSize: 12 }}
+              cursor={{ stroke: '#111111', strokeDasharray: '2 3' }}
+            />
+            <Area type="monotone" dataKey="revenue" stroke="#111111" strokeWidth={1.75} fill="url(#revenue-wash)" activeDot={{ r: 4, fill: '#111111', stroke: '#ffffff', strokeWidth: 2 }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </Panel>
   )
 }
 
 export function ChartSkeleton({ height = 220 }: { height?: number }) {
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 p-5 animate-pulse">
-      <div className="h-4 bg-neutral-200 rounded w-1/3 mb-4" />
-      <div className={`bg-neutral-100 rounded-xl`} style={{ height }} />
+    <div className="border border-form-rule p-5">
+      <Skeleton className="mb-4 h-4 w-1/3" />
+      <div className="animate-pulse bg-form-wash" style={{ height }} />
     </div>
   )
 }

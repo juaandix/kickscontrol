@@ -100,8 +100,8 @@ export default function BackofficePage() {
               Array.from({ length: 8 }).map((_, i) => <KpiCardSkeleton key={i} />)
             ) : (
               <>
-                <KpiCard title="Ingresos totales" value={formatCurrency(s.totalRevenue)} subtitle="de pedidos confirmados" />
-                <KpiCard title="Pedidos" value={s.totalOrders.toLocaleString('es-ES')} subtitle="confirmados en el periodo" />
+                <KpiCard title="Ingresos totales" value={formatCurrency(s.totalRevenue)} subtitle="confirmados, enviados y entregados" />
+                <KpiCard title="Pedidos" value={s.totalOrders.toLocaleString('es-ES')} subtitle="web y caja, sin pendientes ni cancelados" />
                 <KpiCard title="Ticket medio" value={formatCurrency(s.avgTicket)} subtitle="ingresos / pedidos" />
                 <KpiCard title="Unidades vendidas" value={s.totalUnitsSold.toLocaleString('es-ES')} subtitle="pares y prendas" />
                 <KpiCard title="Sell-through" value={`${Number(s.sellThroughRate).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`} subtitle="vendidas / (vendidas + en stock)" />

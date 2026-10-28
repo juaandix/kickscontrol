@@ -37,7 +37,14 @@
    - [KPIs de retail reales](#83-kpis-de-retail-reales)
    - [Recharts sobre Chart.js](#84-recharts-sobre-chartjs)
    - [Estado de fechas en URL en el dashboard](#85-estado-de-fechas-en-url-en-el-dashboard)
-9. [Reflexión final — Portfolio vs. Producción](#9-reflexión-final--portfolio-vs-producción)
+9. [Sprint 5 — Rediseño, trazabilidad de stock y tienda física](#9-sprint-5--rediseño-trazabilidad-de-stock-y-tienda-física)
+   - [Rediseño: la tienda de almacén](#91-rediseño-la-tienda-de-almacén)
+   - [Registro de movimientos de stock](#92-registro-de-movimientos-de-stock)
+   - [Tienda física: un stock, dos canales](#93-tienda-física-un-stock-dos-canales)
+   - [La caja (TPV)](#94-la-caja-tpv)
+   - [Modo tienda y acceso del personal](#95-modo-tienda-y-acceso-del-personal)
+   - [Correcciones que destapó el sprint](#96-correcciones-que-destapó-el-sprint)
+10. [Reflexión final — Portfolio vs. Producción](#10-reflexión-final--portfolio-vs-producción)
 
 ---
 
@@ -1074,10 +1081,12 @@ Responde a la pregunta crítica de operaciones: **¿cuántos días aguanta el st
 #### Tasa de Merma (Shrinkage Rate)
 
 ```
-Merma = ajustes negativos × 100 / total movimientos de stock
+Merma = uds dadas de baja por MERMA × 100 / (uds vendidas + uds dadas de baja)
 ```
 
-Mide el porcentaje de inventario perdido por robo, daño o error de conteo. En retail, una tasa de merma alta dispara alertas operativas. Se calcula sobre la tabla `stock_movements` con `reason = 'MERMA'` o `delta < 0`.
+Mide qué parte de lo que salió de la estantería fue pérdida (robo, daño, error de conteo) y no venta. En retail, una tasa de merma alta dispara alertas operativas.
+
+> En el Sprint 4 la API devolvía este KPI fijo a 0 porque no existía registro de ajustes. Se implementó de verdad en el Sprint 5 sobre la tabla `stock_movements` (ver [9.2](#92-registro-de-movimientos-de-stock)).
 
 ### 8.4 Recharts sobre Chart.js
 
@@ -1117,7 +1126,85 @@ En este sprint, los pickers de fecha usan `useState` local en lugar de `searchPa
 
 ---
 
-## 9. Reflexión final — Portfolio vs. Producción
+## 9. Sprint 5 — Rediseño, trazabilidad de stock y tienda física
+
+### 9.1 Rediseño: la tienda de almacén
+
+La tienda pasó por varias direcciones visuales hasta fijar una base blanca al nivel de Kith y SVD (fotografía primero, chrome mínimo, esquinas rectas) con una personalidad propia sacada del oficio: **el almacén**. Cada producto lleva la etiqueta del extremo de la caja de zapatos (código de barras generado a partir de la referencia real, SKU, unidades), una franja sobre la cabecera muestra el stock en directo y el tono es el de la tienda ("Lo que ves, está en el almacén", "Pasar por caja"). Las cuatro categorías tienen página propia, no una plantilla recoloreada.
+
+El backoffice ("la trastienda") usa la misma hoja blanca y la misma tipografía: KPIs en cuadrícula, gráficos solo en tinta (el rojo se reserva para alertas) y el inventario como **matriz talla × color**, que es como se ve una estantería real.
+
+Regla que guía todo el diseño: **cada número en pantalla sale de la API**. Por eso el dashboard mostró la merma como "—" hasta que existió un dato real.
+
+### 9.2 Registro de movimientos de stock
+
+```sql
+CREATE TABLE stock_movements (
+    id          BIGSERIAL PRIMARY KEY,
+    variant_id  BIGINT NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+    user_id     BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    delta       INT NOT NULL,
+    reason      VARCHAR(20) NOT NULL,
+    stock_after INT NOT NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_movement_delta  CHECK (delta <> 0),
+    CONSTRAINT chk_movement_after  CHECK (stock_after >= 0),
+    CONSTRAINT chk_movement_reason CHECK (reason IN ('RECEPCIÓN', 'DEVOLUCIÓN', 'AJUSTE', 'MERMA'))
+);
+```
+
+Decisiones:
+
+- **Se registra en la misma transacción que el cambio de stock**, y el ajuste usa `findByIdForUpdate` (el mismo bloqueo que el checkout): un recuento y una venta simultáneos no se pisan, y nunca hay un ajuste sin su registro ni al revés.
+- **Las reglas del motivo viven en el servidor** (`StockMovementReason`): una recepción o devolución solo puede sumar, una merma solo restar, un recuento ambas. La interfaz lo avisa, pero la API lo garantiza (`400 "A MERMA cannot move stock by 1"`).
+- **`user_id` es anulable con `ON DELETE SET NULL`**: el historial sobrevive a la baja de la cuenta que hizo el ajuste.
+- **`stock_after` se guarda**, no se recalcula: el historial de una caja se lee tal cual ("−1 · Recuento · Juan García · quedan 0") sin reconstruir sumas.
+- Las ventas **no** se registran aquí: ya viven en `order_items`. La tabla es solo para cambios manuales.
+
+### 9.3 Tienda física: un stock, dos canales
+
+La pregunta de diseño era si la tienda física tenía stock propio o compartía el de la web. Se eligió **un único stock compartido**, con el canal anotado en cada venta:
+
+```
+orders.channel         ONLINE | STORE
+orders.payment_method  CARD | CASH   (solo caja)
+orders.cash_given      efectivo entregado (para el cambio del ticket)
+orders.user_id         ONLINE: el cliente · STORE: el dependiente que cobró
+```
+
+Stock separado por ubicación (almacén online / tienda) habría sido más realista para una cadena, pero obliga a decidir de dónde sale cada venta online, a mover stock entre ubicaciones y a duplicar todas las consultas de inventario. Para una sola tienda con web, el stock compartido es lo correcto, y deja la puerta abierta a una tabla `stock_locations` si hiciese falta.
+
+**El descuento de stock se extrajo a un único método** (`takeFromShelf`) que usan `checkout()` y `storeSale()`. Así la defensa en 3 capas del Sprint 3 protege ambos canales por construcción: si un cliente online y la caja intentan llevarse la última unidad a la vez, el segundo `SELECT FOR UPDATE` espera, ve stock 0 y lanza `InsufficientStockException`.
+
+### 9.4 La caja (TPV)
+
+- **Escáner como teclado**: los lectores de código de barras teclean el código y pulsan Enter. La caja trata lo escrito como SKU si tiene forma de referencia (`NK-AM90-42-WB`, función `looksLikeSku`, con test) y lo busca con `GET /api/store/variants/{sku}`; si no, lanza una búsqueda por modelo con *debounce*.
+- **Ticket limitado al stock**: no se pueden añadir más unidades de las que hay en la estantería, contando las que ya están en el ticket. El servidor vuelve a comprobarlo al cobrar.
+- **Líneas repetidas**: el mismo SKU escaneado dos veces llega como una sola línea con las cantidades sumadas (se bloquea la fila una vez).
+- **Efectivo**: el servidor rechaza un importe entregado menor que el total y devuelve el cambio calculado; la interfaz propone "Exacto" y los billetes inmediatamente superiores.
+- **La venta nace `DELIVERED`**: se cobra y se entrega en el mostrador, no hay envío.
+
+### 9.5 Modo tienda y acceso del personal
+
+`/tienda` es la pantalla con la que arrancan los dispositivos de la tienda. La portada y el catálogo son públicos; la caja y el inventario piden el inicio de sesión del personal:
+
+- El *proxy* de Next.js protege solo `/tienda/caja` y `/tienda/inventario` y redirige a `/login?returnTo=…`; el login detecta que viene de la tienda, se presenta como "Acceso del personal de tienda" y, al entrar, devuelve a la pantalla pedida.
+- Un cliente con sesión iniciada en el dispositivo ve "Solo personal" en lugar de la caja (`StaffOnly`), y la API lo rechaza igualmente (`@PreAuthorize` en `/api/store/**`).
+- Al salir se vuelve a la portada de la tienda, no a la web online: el modo tienda nunca deja al dependiente fuera de su contexto.
+
+### 9.6 Correcciones que destapó el sprint
+
+| Problema | Corrección |
+|---|---|
+| Los ingresos solo contaban pedidos `CONFIRMED`: enviados y entregados no sumaban (ni lo harían las ventas de caja, que nacen entregadas) | `OrderStatus.SOLD = CONFIRMED, SHIPPED, DELIVERED` en todas las consultas analíticas |
+| La tasa de merma era un 0 fijo en el código | Cálculo real sobre `stock_movements` |
+| El listado de pedidos del admin devolvía `items: []` y solo los 20 primeros | Ítems incluidos con `@BatchSize` (evita N+1) y paginación en la interfaz |
+| La lista de stock bajo no decía de qué producto era cada talla y su botón no hacía nada | Nombre del producto y ajuste funcional |
+| El formulario de producto usaba categorías y géneros (`LIFESTYLE`, `HOMBRE`) que no existían en los datos | Mismos valores que la tienda y tallas según calzado o ropa |
+
+---
+
+## 10. Reflexión final — Portfolio vs. Producción
 
 Este proyecto está diseñado para demostrar capacidad técnica real, pero algunas decisiones serían distintas en producción:
 
@@ -1131,9 +1218,13 @@ Este proyecto está diseñado para demostrar capacidad técnica real, pero algun
 | URLs de og:image de Nike (pueden cambiar) | Contract tests o monitoring de las URLs de activos |
 | Un único nodo de BD | Cluster PostgreSQL con réplica y backups automáticos |
 | Mockito puro en tests de servicio | Testcontainers con PostgreSQL real para cobertura de ENUM, constraints y triggers |
+| Pago con tarjeta simulado en la caja | Integración con un datáfono (TPV bancario) y conciliación al cierre |
+| Caja que necesita conexión | Modo sin conexión con cola de ventas y sincronización |
+| Un único stock para web y tienda | Stock por ubicación si hubiese varias tiendas o almacén propio de la web |
+| Migraciones a mano (`schema.sql` + `ALTER` en BD existentes) | Flyway o Liquibase con migraciones versionadas |
 
 Conocer estas diferencias es tan importante como saber construir el sistema. Las decisiones de portfolio se tomaron deliberadamente para mantener el stack manejable unipersonalmente mientras se demuestra el patrón correcto en cada capa.
 
 ---
 
-*Documento de arquitectura del proyecto KicksControl. Sprints 1–4 completados + suite de tests + fix de imágenes. Última actualización: 2026-05-29.*
+*Documento de arquitectura del proyecto KicksControl. Sprints 1–5 completados. Última actualización: 2026-10-28.*

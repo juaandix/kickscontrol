@@ -1,7 +1,9 @@
 # KicksControl — E-Commerce & Smart Backoffice
 
 > Portfolio project by **Juan David Gil** (DAW + Systems Engineering @ UPM | ex Shift Leader @ Foot Locker)  
-> Full-stack sneaker store with production-grade inventory management, transactional checkout, and a retail KPI dashboard built on real domain expertise.
+> Full-stack sneaker store with three faces on **one shared stock per size and colour**: an online shop, a physical-store app with a till, and a retail backoffice — built on real shop-floor expertise.
+
+![Online shop](docs/capturas/01-web-portada.png)
 
 ---
 
@@ -11,7 +13,7 @@
 |---|---|
 | **Backend** | Java 17 · Spring Boot 3.5 · Spring Security + JWT · Hibernate/JPA |
 | **Database** | PostgreSQL 16 · ENUMs · CHECK constraints · composite indexes · analytics views |
-| **Frontend** | Next.js 15 (App Router) · TypeScript strict · TanStack Query · Recharts |
+| **Frontend** | Next.js 16 (App Router) · React 19 · TypeScript strict · TanStack Query · Recharts |
 | **Styling** | Tailwind CSS 4 |
 | **Infrastructure** | Docker Compose (profiles) · Multi-stage Dockerfiles · Makefile |
 | **API Docs** | Springdoc OpenAPI 2.6 (Swagger UI) |
@@ -20,22 +22,33 @@
 
 ## Features
 
-### Store (customer-facing)
+### Online shop (`/`)
+- **Stockroom identity** — white Kith/SVD-style base with a shoebox end label (barcode, reference, units) on every product and a live stock strip above the header
+- **Bespoke category pages** for Running, Basketball, Lifestyle and Skateboarding
 - **Catalog** with dynamic filters (brand, category, size, color, gender, in-stock only) stored in URL — bookmarkeable and shareable
 - **Product detail** with color/size variant selector and live stock status
 - **Shopping cart** (persistent, server-side via TanStack Query)
 - **Transactional checkout** with 3-layer concurrency protection (optimistic lock → pessimistic SELECT FOR UPDATE → DB CHECK constraint)
 - **Order history** with status badges and order detail
 
+### Physical store (`/tienda`)
+- **Store front** for the shop's own devices: Catalog (open), Till and Stock (staff sign-in, then back to the screen asked for)
+- **Store catalog** — every model with the units left per size and colour
+- **Till (POS)** — scan a SKU or search a model, ticket capped at the stock on the shelf, card or cash with change, receipt and today's takings
+- A till sale is born `DELIVERED`, is attributed to the member of staff and shows in the backoffice tagged *Tienda*
+
 ### Backoffice (ADMIN / SHIFT_LEADER)
-- **Inventory management** — expandable product table, stock adjustment modal with delta + reason (RECEPCIÓN / AJUSTE / MERMA / DEVOLUCIÓN); every adjustment is logged in `stock_movements` with its author and the stock left, and shown as the box's history
-- **Order management** — inline status transitions
+- **Inventory** — one row per model with thumbnail and low/out-of-stock flags, expanding into a **size × colour stock matrix**; tap a box to adjust it
+- **Traceable stock adjustments** — delta + reason (RECEPCIÓN / DEVOLUCIÓN / AJUSTE / MERMA), sign rules enforced server-side; every adjustment is logged in `stock_movements` with its author and the stock left, and shown as the box's history
+- **Restock list** — variants at ≤ 5 units, emptiest first, one tap to adjust
+- **Order management** — status tabs with counts, pagination, item breakdown, channel (online / store), inline status transitions
 - **KPI Dashboard** — configurable date range + granularity:
   - Revenue, orders, avg ticket, units sold
   - **Sell-Through Rate** — `unitsSold * 100 / (unitsSold + currentStock)`
   - **Days of Coverage** — `currentStock / avgDailySales`
   - **Shrinkage Rate** — units written off as MERMA / (units sold + units written off)
-  - Revenue line chart, top sellers bar chart, orders-by-status donut
+  - Revenue chart, best sellers, orders by status
+  - Sales = confirmed, shipped or delivered orders, from the web and the till
 
 ---
 
@@ -75,11 +88,24 @@ npm run dev
 ### Seed data
 
 ```bash
-make seed    # loads 15 real sneaker models with variants
+make seed    # loads the catalog: 38 products (25 footwear, 13 apparel) with their variants
 ```
 
-Default seed creates an admin account:  
-`admin@kickscontrol.com` / `Admin1234!`
+Seed accounts:
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@kickscontrol.com` | `Admin1234!` |
+| Shift Leader | `shiftleader@kickscontrol.com` | `Admin1234!` |
+| Customer | `cliente@kickscontrol.com` | `User1234!` |
+
+The physical store opens at `/tienda`.
+
+> **Upgrading an existing database?** `schema.sql` only runs when the volume is created. Bring an older database up to date with the idempotent script in `kickscontrol-backend/src/main/resources/db/migrations/2026-10-tienda-fisica.sql`:
+>
+> ```bash
+> docker exec -i kickscontrol-db psql -U kickscontrol_user -d kickscontrol < kickscontrol-backend/src/main/resources/db/migrations/2026-10-tienda-fisica.sql
+> ```
 
 ---
 
@@ -96,21 +122,25 @@ kickscontrol/
 │       ├── dto/                   Request & response DTOs
 │       ├── security/              JWT filter + config
 │       └── exception/             Global error handler
-├── kickscontrol-frontend/         Next.js 15 App Router
+├── kickscontrol-frontend/         Next.js 16 App Router
 │   ├── app/
-│   │   ├── (store)/               Public store pages
+│   │   ├── (store)/               Online shop pages
+│   │   ├── tienda/                Physical store: front, catalog, till, stock
 │   │   ├── backoffice/            Protected admin pages
 │   │   ├── login/                 Auth pages
 │   │   └── register/
 │   ├── components/
-│   │   ├── backoffice/            KpiCard, charts, StockAdjustModal
+│   │   ├── tienda/                StoreShell, Till, StoreCatalog, ProductSizes
+│   │   ├── backoffice/            KpiCard, charts, StockAdjustModal, LowStockPanel
 │   │   ├── cart/                  CartDrawer
 │   │   ├── catalog/               FilterPanel, ProductGrid
 │   │   └── layout/                Header, Footer
 │   ├── context/                   AuthContext, CartContext
 │   └── lib/                       apiClient, analytics, products, admin, cart
 ├── docker-compose.yml             profiles: db | full
+├── docs/capturas/                 portfolio screenshots (scripts/capturas-portfolio.mjs)
 ├── Makefile                       dev workflow commands
+├── PORTFOLIO.md                   portfolio write-up (Spanish)
 └── ARQUITECTURA.md                technical decisions document
 ```
 
@@ -126,8 +156,9 @@ Full interactive docs at `/swagger-ui.html` when the backend is running.
 | Catalog | `GET /api/products` · `GET /api/products/{id}` · `/brands` · `/categories` |
 | Cart | `GET/POST /api/cart` · `PUT/DELETE /api/cart/items/{id}` |
 | Orders | `POST /api/orders/checkout` · `GET /api/orders` · `GET /api/orders/{id}` |
+| Store (till) | `POST /api/store/sales` · `GET /api/store/sales/today` · `GET /api/store/variants/{sku}` |
 | Admin — Products | `GET/POST /api/admin/products` · `PUT/DELETE /api/admin/products/{id}` |
-| Admin — Inventory | `PATCH /api/admin/variants/{id}/stock` · `GET /api/admin/products/inventory/alerts` |
+| Admin — Inventory | `PATCH /api/admin/variants/{id}/stock` · `GET /api/admin/variants/{id}/movements` · `GET /api/admin/products/inventory/alerts` |
 | Admin — Orders | `GET /api/admin/orders` · `PATCH /api/admin/orders/{id}/status` |
 | Analytics | `GET /api/admin/analytics/summary` · `/revenue-chart` · `/top-sellers` · `/orders-by-status` |
 
@@ -141,7 +172,7 @@ Concurrent purchases of the last unit are handled at three levels:
 2. **`SELECT FOR UPDATE` (pessimistic lock)** — `findByIdForUpdate()` in the repository acquires a row-level lock before decrementing stock.
 3. **`CHECK (stock_quantity >= 0)` (DB constraint)** — last line of defense; raises a constraint violation if anything slips through.
 
-All three layers fire within a single `@Transactional` method that also calls `clearCart()` atomically.
+All three layers fire within a single `@Transactional` method that also calls `clearCart()` atomically. The till's `storeSale()` takes stock through the same private method (`takeFromShelf`), so a web customer and the till can never both sell the last unit.
 
 ---
 
@@ -155,6 +186,16 @@ Metrics come from real-world retail operations (Foot Locker Shift Leader experie
 | Days of Coverage | `currentStock / avgDailySales` | Predicts when stock will run out |
 | Shrinkage Rate | `mermaUnits × 100 / (unitsSold + mermaUnits)` | Share of the units that left the shelf as loss (theft, damage, error) rather than sales |
 | Avg Ticket | `totalRevenue / totalOrders` | Key profitability indicator per transaction |
+
+---
+
+## Screenshots
+
+23 screenshots of the online shop, backoffice and physical store in [`docs/capturas/`](docs/capturas/), with a gallery in [PORTFOLIO.md](PORTFOLIO.md#capturas). Regenerate them with:
+
+```bash
+BASE=http://localhost:3000 node kickscontrol-frontend/scripts/capturas-portfolio.mjs   # add --con-venta to ring up one real till sale
+```
 
 ---
 

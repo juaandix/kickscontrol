@@ -1,6 +1,8 @@
 package com.kickscontrol.backend.entity;
 
 import com.kickscontrol.backend.entity.enums.OrderStatus;
+import com.kickscontrol.backend.entity.enums.PaymentMethod;
+import com.kickscontrol.backend.entity.enums.SalesChannel;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
 import lombok.*;
@@ -23,9 +25,24 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // ONLINE: the customer who bought it. STORE: the member of staff who rang it up at the till
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private SalesChannel channel = SalesChannel.ONLINE;
+
+    // Till sales only; online orders are paid by card at checkout
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 10)
+    private PaymentMethod paymentMethod;
+
+    // Cash handed over at the till, to print the change on the ticket
+    @Column(name = "cash_given", precision = 10, scale = 2)
+    private BigDecimal cashGiven;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -1,6 +1,7 @@
 package com.kickscontrol.backend.dto.response;
 
 import com.kickscontrol.backend.entity.Order;
+import com.kickscontrol.backend.entity.enums.SalesChannel;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -17,6 +18,13 @@ public class OrderResponseDto {
     private String shippingAddress;
     private LocalDateTime createdAt;
     private List<OrderItemResponseDto> items;
+    private String channel;
+    /** Till sales only */
+    private String paymentMethod;
+    private BigDecimal cashGiven;
+    private BigDecimal change;
+    /** Till sales only: the member of staff who rang it up */
+    private String soldBy;
 
     public static OrderResponseDto from(Order order) {
         return OrderResponseDto.builder()
@@ -26,6 +34,13 @@ public class OrderResponseDto {
                 .shippingAddress(order.getShippingAddress())
                 .createdAt(order.getCreatedAt())
                 .items(order.getItems().stream().map(OrderItemResponseDto::from).toList())
+                .channel(order.getChannel().name())
+                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
+                .cashGiven(order.getCashGiven())
+                .change(order.getCashGiven() != null ? order.getCashGiven().subtract(order.getTotalAmount()) : null)
+                .soldBy(order.getChannel() == SalesChannel.STORE
+                        ? order.getUser().getFirstName() + " " + order.getUser().getLastName()
+                        : null)
                 .build();
     }
 
@@ -37,6 +52,7 @@ public class OrderResponseDto {
                 .shippingAddress(order.getShippingAddress())
                 .createdAt(order.getCreatedAt())
                 .items(List.of())
+                .channel(order.getChannel().name())
                 .build();
     }
 }

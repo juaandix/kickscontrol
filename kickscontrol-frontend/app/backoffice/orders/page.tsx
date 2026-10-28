@@ -120,7 +120,10 @@ export default function AdminOrdersPage() {
                         <td className="type-label hidden px-3 py-2.5 text-ink-soft md:table-cell">{when(order.createdAt)}</td>
                         <td className="max-w-[18rem] px-3 py-2.5">
                           <p className="truncate">{order.items[0]?.productName ?? '—'}{order.items.length > 1 && <span className="text-ink-soft"> y {order.items.length - 1} más</span>}</p>
-                          <p className="type-label text-ink-soft">{units} {units === 1 ? 'ud' : 'uds'}</p>
+                          <p className="type-label text-ink-soft">
+                            {units} {units === 1 ? 'ud' : 'uds'}
+                            {order.channel === 'STORE' && <span className="ml-2 bg-ink px-1.5 py-px text-paper">Tienda</span>}
+                          </p>
                         </td>
                         <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{formatPrice(order.totalAmount)}</td>
                         <td className="py-2.5 pl-3">
@@ -150,8 +153,17 @@ export default function AdminOrdersPage() {
                                 ))}
                               </ul>
                               <div>
-                                <p className="type-field">Envío a</p>
-                                <p className="mt-1 text-sm">{order.shippingAddress || '—'}</p>
+                                {order.channel === 'STORE' ? (
+                                  <>
+                                    <p className="type-field">Venta en tienda</p>
+                                    <p className="mt-1 text-sm">Cobrada en caja por {order.soldBy ?? '—'}</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="type-field">Envío a</p>
+                                    <p className="mt-1 text-sm">{order.shippingAddress || '—'}</p>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </td>

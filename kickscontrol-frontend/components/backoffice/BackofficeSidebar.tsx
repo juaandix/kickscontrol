@@ -47,10 +47,19 @@ export function BackofficeSidebar() {
             </Link>
           )
         })}
-        <Link href="/" className="mt-auto hidden items-center gap-1.5 px-5 py-2.5 text-sm text-ink-soft hover:text-ink lg:flex">
-          Ir a la tienda
-          <ArrowUpRightIcon className="size-3.5" />
+        <Link href="/tienda/caja" className="flex shrink-0 items-center px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-form-wash lg:hidden">
+          Caja
         </Link>
+        <div className="mt-auto hidden border-t border-form-rule py-2 lg:block">
+          <Link href="/tienda/caja" className="flex items-center gap-1.5 px-5 py-2 text-sm text-ink-soft hover:text-ink">
+            Caja de la tienda
+            <ArrowUpRightIcon className="size-3.5" />
+          </Link>
+          <Link href="/" className="flex items-center gap-1.5 px-5 py-2 text-sm text-ink-soft hover:text-ink">
+            Tienda online
+            <ArrowUpRightIcon className="size-3.5" />
+          </Link>
+        </div>
       </nav>
 
       <div className="hidden items-center gap-3 border-t border-form-rule px-5 py-4 lg:flex">

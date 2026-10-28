@@ -61,10 +61,14 @@ export function Header() {
             ))}
             <Link href="/?type=APPAREL#catalog" className="underline-offset-4 hover:underline">Ropa</Link>
             {isStaff && <Link href="/backoffice" className="text-ink-soft hover:text-ink">Backoffice</Link>}
+            {isStaff && <Link href="/tienda/caja" className="text-ink-soft hover:text-ink">Caja</Link>}
           </nav>
 
           <div className="ml-auto flex items-center gap-1 sm:gap-3">
             <Suspense><HeaderSearch /></Suspense>
+
+            {/* Below lg the category nav is hidden: keep the staff's way into the till */}
+            {isStaff && <Link href="/tienda/caja" className="type-label px-2 text-ink-soft hover:text-ink lg:hidden">Caja</Link>}
 
             {isAuthenticated ? (
               <>

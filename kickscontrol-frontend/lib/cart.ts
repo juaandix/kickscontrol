@@ -53,6 +53,10 @@ export interface OrderDto {
   shippingAddress: string
   createdAt: string
   items: OrderItemDto[]
+  /** Where it was sold; older responses omit it and mean online */
+  channel?: 'ONLINE' | 'STORE'
+  /** Till sales: the member of staff who rang it up */
+  soldBy?: string | null
 }
 
 export interface OrderItemDto {

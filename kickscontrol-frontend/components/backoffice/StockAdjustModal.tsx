@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminAdjustStock } from '@/lib/admin'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { adminAdjustStock, adminGetStockMovements } from '@/lib/admin'
 import type { ProductVariant } from '@/types'
 import { Barcode } from '@/components/brand/Barcode'
 import { Modal, FormError, btnGhost, btnPrimary, inputCls, labelCls } from './ui'
@@ -17,6 +17,11 @@ const REASONS = [
 
 const STEPS = [-5, -1, 1, 5, 12]
 
+const REASON_LABEL = Object.fromEntries(REASONS.map(r => [r.value, r.label]))
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+
 interface Props {
   variant: ProductVariant & { productName?: string }
   onClose: () => void
@@ -27,12 +32,18 @@ export function StockAdjustModal({ variant, onClose }: Props) {
   const [reason, setReason] = useState(REASONS[0].value)
   const queryClient = useQueryClient()
 
+  const history = useQuery({
+    queryKey: ['stock-movements', variant.id],
+    queryFn: () => adminGetStockMovements(variant.id),
+  })
+
   const mutation = useMutation({
     mutationFn: () => adminAdjustStock(variant.id, { delta, reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] })
       queryClient.invalidateQueries({ queryKey: ['low-stock'] })
       queryClient.invalidateQueries({ queryKey: ['analytics-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['stock-movements', variant.id] })
       onClose()
     },
   })
@@ -96,6 +107,33 @@ export function StockAdjustModal({ variant, onClose }: Props) {
         {newStock < 0 && <FormError>No puedes sacar más unidades de las que hay en la estantería.</FormError>}
         {signMismatch && <FormError>{sign > 0 ? 'Una recepción o devolución suma unidades.' : 'Una merma resta unidades.'}</FormError>}
         {mutation.isError && <FormError>No se pudo guardar el ajuste. Inténtalo de nuevo.</FormError>}
+
+        {/* The box's logbook: who touched it, why, and what was left */}
+        <section aria-label="Últimos movimientos" className="border-t border-form-rule pt-4">
+          <p className="type-field mb-2">Últimos movimientos</p>
+          {history.isPending ? (
+            <div className="h-16 animate-pulse bg-form-wash" />
+          ) : !history.data?.length ? (
+            <p className="text-sm text-ink-soft">Sin ajustes registrados. Las ventas se descuentan solas al pasar por caja.</p>
+          ) : (
+            <ol className="divide-y divide-form-rule border-y border-form-rule">
+              {history.data.slice(0, 5).map(m => (
+                <li key={m.id} className="grid grid-cols-[3.25rem_1fr_auto] items-baseline gap-x-3 py-2">
+                  <span className={`type-label text-[0.8125rem] font-bold tabular-nums ${m.delta < 0 ? 'text-alarm' : ''}`}>
+                    {m.delta > 0 ? `+${m.delta}` : `−${-m.delta}`}
+                  </span>
+                  <span className="min-w-0 truncate text-sm">
+                    {REASON_LABEL[m.reason] ?? m.reason}
+                    <span className="text-ink-soft"> · {m.userName ?? 'cuenta eliminada'}</span>
+                  </span>
+                  <span className="type-label text-right text-ink-soft">
+                    {when(m.createdAt)} · quedan {m.stockAfter}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
       </div>
 
       <div className="flex gap-2 border-t border-form-rule px-5 py-4">

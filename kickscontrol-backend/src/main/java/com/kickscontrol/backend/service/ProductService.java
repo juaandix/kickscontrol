@@ -4,7 +4,10 @@ import com.kickscontrol.backend.dto.request.ProductRequestDto;
 import com.kickscontrol.backend.dto.request.StockAdjustmentDto;
 import com.kickscontrol.backend.dto.request.VariantRequestDto;
 import com.kickscontrol.backend.dto.response.ProductResponseDto;
+import com.kickscontrol.backend.dto.response.StockMovementResponseDto;
+import com.kickscontrol.backend.dto.response.StoreVariantLookupDto;
 import com.kickscontrol.backend.dto.response.VariantResponseDto;
+import com.kickscontrol.backend.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -35,7 +38,11 @@ public interface ProductService {
 
     VariantResponseDto updateVariant(Long variantId, VariantRequestDto dto);
 
-    VariantResponseDto adjustStock(Long variantId, StockAdjustmentDto dto);
+    VariantResponseDto adjustStock(Long variantId, StockAdjustmentDto dto, User user);
+
+    List<StockMovementResponseDto> getStockMovements(Long variantId);
+
+    StoreVariantLookupDto findBySku(String sku);
 
     List<VariantResponseDto> getLowStockVariants(int threshold);
 }

@@ -1,9 +1,12 @@
 package com.kickscontrol.backend.service.impl;
 
 import com.kickscontrol.backend.dto.request.CheckoutRequest;
+import com.kickscontrol.backend.dto.request.StoreSaleRequest;
 import com.kickscontrol.backend.dto.response.OrderResponseDto;
 import com.kickscontrol.backend.entity.*;
 import com.kickscontrol.backend.entity.enums.OrderStatus;
+import com.kickscontrol.backend.entity.enums.PaymentMethod;
+import com.kickscontrol.backend.entity.enums.SalesChannel;
 import com.kickscontrol.backend.exception.BusinessException;
 import com.kickscontrol.backend.exception.InsufficientStockException;
 import com.kickscontrol.backend.exception.ResourceNotFoundException;
@@ -18,8 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -59,41 +65,10 @@ public class OrderServiceImpl implements OrderService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        List<OrderItem> orderItems = new ArrayList<>();
-        BigDecimal total = BigDecimal.ZERO;
-
-        // Capa 2: adquirimos lock pesimista sobre cada variante antes de tocar el stock
-        for (CartItem cartItem : cartItems) {
-            ProductVariant variant = variantRepository
-                    .findByIdForUpdate(cartItem.getVariant().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Variant", "id", cartItem.getVariant().getId()));
-
-            int requested = cartItem.getQuantity();
-
-            // Capa 1 + validación explícita: si el stock no alcanza, rollback total
-            if (variant.getStockQuantity() < requested) {
-                throw new InsufficientStockException(
-                        variant.getSku(), requested, variant.getStockQuantity()
-                );
-            }
-
-            // Descontar stock — Capa 3 (CHECK >= 0) actúa como red de seguridad en la BD
-            variant.setStockQuantity(variant.getStockQuantity() - requested);
-            variantRepository.save(variant);
-
-            // Snapshot del precio en el momento de compra
-            BigDecimal unitPrice = variant.getProduct().getBasePrice()
-                    .add(variant.getPriceModifier());
-
-            OrderItem orderItem = OrderItem.builder()
-                    .variant(variant)
-                    .quantity(requested)
-                    .unitPrice(unitPrice)
-                    .build();
-
-            orderItems.add(orderItem);
-            total = total.add(unitPrice.multiply(BigDecimal.valueOf(requested)));
-        }
+        List<OrderItem> orderItems = takeFromShelf(cartItems.stream()
+                .map(ci -> new Line(ci.getVariant().getId(), ci.getQuantity()))
+                .toList());
+        BigDecimal total = totalOf(orderItems);
 
         Order order = Order.builder()
                 .user(user)
@@ -116,6 +91,97 @@ public class OrderServiceImpl implements OrderService {
                 saved.getId(), userId, total, orderItems.size());
 
         return OrderResponseDto.from(saved);
+    }
+
+    /**
+     * Venta en caja: mismo stock y misma defensa en 3 capas que el checkout online,
+     * pero se cobra y se entrega en el mostrador, así que nace DELIVERED.
+     */
+    @Override
+    @Transactional
+    public OrderResponseDto storeSale(User staff, StoreSaleRequest request) {
+        // El mismo SKU escaneado dos veces es una sola línea con las cantidades sumadas
+        Map<Long, Integer> lines = new LinkedHashMap<>();
+        for (StoreSaleRequest.Line line : request.getItems()) {
+            lines.merge(line.getVariantId(), line.getQuantity(), Integer::sum);
+        }
+
+        List<OrderItem> orderItems = takeFromShelf(lines.entrySet().stream()
+                .map(e -> new Line(e.getKey(), e.getValue()))
+                .toList());
+        BigDecimal total = totalOf(orderItems);
+
+        BigDecimal cashGiven = null;
+        if (request.getPaymentMethod() == PaymentMethod.CASH) {
+            cashGiven = request.getCashGiven();
+            if (cashGiven == null || cashGiven.compareTo(total) < 0) {
+                throw new BusinessException(String.format("Cash given (%s) does not cover the total (%s)", cashGiven, total));
+            }
+        }
+
+        Order order = Order.builder()
+                .user(staff)
+                .channel(SalesChannel.STORE)
+                .status(OrderStatus.DELIVERED)
+                .paymentMethod(request.getPaymentMethod())
+                .cashGiven(cashGiven)
+                .totalAmount(total)
+                .build();
+        for (OrderItem item : orderItems) {
+            item.setOrder(order);
+            order.getItems().add(item);
+        }
+
+        Order saved = orderRepository.save(order);
+        log.info("Store sale — orderId: {}, staff: {}, total: {}, payment: {}, lines: {}",
+                saved.getId(), staff.getEmail(), total, request.getPaymentMethod(), orderItems.size());
+        return OrderResponseDto.from(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponseDto> getStoreSalesSince(LocalDateTime since) {
+        return orderRepository.findByChannelAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(SalesChannel.STORE, since)
+                .stream()
+                .map(OrderResponseDto::from)
+                .toList();
+    }
+
+    private record Line(Long variantId, int quantity) {}
+
+    /**
+     * Bloquea cada variante (Capa 2), comprueba que hay unidades suficientes (Capa 1 + validación
+     * explícita), las descuenta y congela el precio. Si falta stock de una línea, rollback total.
+     */
+    private List<OrderItem> takeFromShelf(List<Line> lines) {
+        List<OrderItem> items = new ArrayList<>();
+        for (Line line : lines) {
+            ProductVariant variant = variantRepository.findByIdForUpdate(line.variantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Variant", "id", line.variantId()));
+
+            if (variant.getStockQuantity() < line.quantity()) {
+                throw new InsufficientStockException(variant.getSku(), line.quantity(), variant.getStockQuantity());
+            }
+
+            // Capa 3 (CHECK stock_quantity >= 0) actúa como red de seguridad en la BD
+            variant.setStockQuantity(variant.getStockQuantity() - line.quantity());
+            variantRepository.save(variant);
+
+            // Snapshot del precio en el momento de la venta
+            BigDecimal unitPrice = variant.getProduct().getBasePrice().add(variant.getPriceModifier());
+            items.add(OrderItem.builder()
+                    .variant(variant)
+                    .quantity(line.quantity())
+                    .unitPrice(unitPrice)
+                    .build());
+        }
+        return items;
+    }
+
+    private static BigDecimal totalOf(List<OrderItem> items) {
+        return items.stream()
+                .map(i -> i.getUnitPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     @Override

@@ -38,13 +38,13 @@ KicksControl es una aplicación web full-stack de venta de calzado deportivo con
 
 ### Backoffice (ADMIN / SHIFT_LEADER)
 
-- **Gestión de inventario** — tabla expandible por modelo, modal de ajuste de stock con delta (+/-) y motivo (RECEPCIÓN / AJUSTE / MERMA / DEVOLUCIÓN)
+- **Gestión de inventario** — tabla expandible por modelo, modal de ajuste de stock con delta (+/-) y motivo (RECEPCIÓN / AJUSTE / MERMA / DEVOLUCIÓN); cada ajuste queda registrado en `stock_movements` con su autor y el stock resultante, y se ve como historial de la caja
 - **Gestión de pedidos** — transiciones de estado inline
 - **Dashboard KPI** — rango de fechas configurable + granularidad (día / semana / mes):
   - Ingresos totales, pedidos, ticket medio, unidades vendidas
   - **Sell-Through Rate** — `unidades vendidas × 100 / (vendidas + stock actual)`
   - **Días de Cobertura** — `stock actual / ventas diarias medias`
-  - **Tasa de Merma** — ajustes negativos / total de movimientos
+  - **Tasa de Merma** — unidades dadas de baja por merma / (vendidas + dadas de baja)
   - Gráfico de ingresos, top sellers, pedidos por estado
 
 ---
@@ -88,7 +88,7 @@ Las métricas del dashboard no son genéricas — son las que se usan en operaci
 |---|---|---|
 | Sell-Through Rate | `vendidas × 100 / (vendidas + stock)` | Eficiencia de la compra de producto |
 | Días de Cobertura | `stock / ventas diarias medias` | Alerta de reposición de stock |
-| Tasa de Merma | `ajustes negativos / total movimientos` | Pérdida por robo, daño o error |
+| Tasa de Merma | `uds merma × 100 / (uds vendidas + uds merma)` | Qué parte de lo que salió de la estantería fue pérdida (robo, daño, error) y no venta |
 | Ticket Medio | `ingresos / pedidos` | Rentabilidad por transacción |
 
 ### Autenticación JWT stateless

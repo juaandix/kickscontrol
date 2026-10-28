@@ -2,6 +2,7 @@ package com.kickscontrol.backend.repository;
 
 import com.kickscontrol.backend.entity.Order;
 import com.kickscontrol.backend.entity.enums.OrderStatus;
+import com.kickscontrol.backend.entity.enums.SalesChannel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,6 +20,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
+
+    List<Order> findByChannelAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(SalesChannel channel, LocalDateTime since);
 
     @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.status = 'CONFIRMED' AND o.createdAt BETWEEN :from AND :to")
     BigDecimal sumRevenueByDateRange(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

@@ -104,10 +104,13 @@ export default function BackofficePage() {
                 <KpiCard title="Pedidos" value={s.totalOrders.toLocaleString('es-ES')} subtitle="confirmados en el periodo" />
                 <KpiCard title="Ticket medio" value={formatCurrency(s.avgTicket)} subtitle="ingresos / pedidos" />
                 <KpiCard title="Unidades vendidas" value={s.totalUnitsSold.toLocaleString('es-ES')} subtitle="pares y prendas" />
-                <KpiCard title="Sell-through" value={`${Number(s.sellThroughRate).toFixed(1)}%`} subtitle="vendidas / (vendidas + en stock)" />
+                <KpiCard title="Sell-through" value={`${Number(s.sellThroughRate).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`} subtitle="vendidas / (vendidas + en stock)" />
                 <KpiCard title="Días de cobertura" value={`${Number(s.avgDaysOfCoverage).toFixed(0)} días`} subtitle="stock actual / venta media diaria" />
-                {/* The API has no log of stock adjustments yet, so there is no shrinkage figure to show */}
-                <KpiCard title="Merma" value="—" subtitle="sin registro de ajustes todavía" />
+                <KpiCard
+                  title="Merma"
+                  value={`${Number(s.shrinkageRate).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`}
+                  subtitle={`${s.shrinkageUnits} uds perdidas / (vendidas + perdidas)`}
+                />
                 <KpiCard
                   title="Tallas en alerta"
                   value={s.lowStockAlerts.toLocaleString('es-ES')}

@@ -28,13 +28,13 @@
 - **Order history** with status badges and order detail
 
 ### Backoffice (ADMIN / SHIFT_LEADER)
-- **Inventory management** — expandable product table, stock adjustment modal with delta + reason (RECEPCIÓN / AJUSTE / MERMA / DEVOLUCIÓN)
+- **Inventory management** — expandable product table, stock adjustment modal with delta + reason (RECEPCIÓN / AJUSTE / MERMA / DEVOLUCIÓN); every adjustment is logged in `stock_movements` with its author and the stock left, and shown as the box's history
 - **Order management** — inline status transitions
 - **KPI Dashboard** — configurable date range + granularity:
   - Revenue, orders, avg ticket, units sold
   - **Sell-Through Rate** — `unitsSold * 100 / (unitsSold + currentStock)`
   - **Days of Coverage** — `currentStock / avgDailySales`
-  - **Shrinkage Rate** — negative stock adjustments / total movements
+  - **Shrinkage Rate** — units written off as MERMA / (units sold + units written off)
   - Revenue line chart, top sellers bar chart, orders-by-status donut
 
 ---
@@ -153,7 +153,7 @@ Metrics come from real-world retail operations (Foot Locker Shift Leader experie
 |---|---|---|
 | Sell-Through Rate | `unitsSold × 100 / (unitsSold + currentStock)` | Measures how efficiently inventory converts to sales |
 | Days of Coverage | `currentStock / avgDailySales` | Predicts when stock will run out |
-| Shrinkage Rate | `negativeAdjustments × 100 / totalMovements` | Tracks inventory loss from theft/damage/error |
+| Shrinkage Rate | `mermaUnits × 100 / (unitsSold + mermaUnits)` | Share of the units that left the shelf as loss (theft, damage, error) rather than sales |
 | Avg Ticket | `totalRevenue / totalOrders` | Key profitability indicator per transaction |
 
 ---

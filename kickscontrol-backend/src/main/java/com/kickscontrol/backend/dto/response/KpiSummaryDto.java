@@ -17,5 +17,6 @@ public class KpiSummaryDto {
     // Retail-specific KPIs
     private BigDecimal sellThroughRate;    // unidades vendidas / (vendidas + stock actual) %
     private Double avgDaysOfCoverage;      // stock actual / promedio ventas diarias
-    private BigDecimal shrinkageRate;      // unidades perdidas por ajuste negativo / total movimientos %
+    private BigDecimal shrinkageRate;      // unidades perdidas por merma / (vendidas + perdidas) %
+    private Long shrinkageUnits;           // unidades perdidas por merma en el periodo
 }

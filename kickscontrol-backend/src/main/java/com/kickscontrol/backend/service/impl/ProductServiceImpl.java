@@ -4,14 +4,20 @@ import com.kickscontrol.backend.dto.request.ProductRequestDto;
 import com.kickscontrol.backend.dto.request.StockAdjustmentDto;
 import com.kickscontrol.backend.dto.request.VariantRequestDto;
 import com.kickscontrol.backend.dto.response.ProductResponseDto;
+import com.kickscontrol.backend.dto.response.StockMovementResponseDto;
+import com.kickscontrol.backend.dto.response.StoreVariantLookupDto;
 import com.kickscontrol.backend.dto.response.VariantResponseDto;
 import com.kickscontrol.backend.entity.Product;
 import com.kickscontrol.backend.entity.ProductVariant;
+import com.kickscontrol.backend.entity.StockMovement;
+import com.kickscontrol.backend.entity.User;
+import com.kickscontrol.backend.entity.enums.StockMovementReason;
 import com.kickscontrol.backend.exception.BusinessException;
 import com.kickscontrol.backend.exception.ResourceNotFoundException;
 import com.kickscontrol.backend.repository.ProductRepository;
 import com.kickscontrol.backend.repository.ProductSpecification;
 import com.kickscontrol.backend.repository.ProductVariantRepository;
+import com.kickscontrol.backend.repository.StockMovementRepository;
 import com.kickscontrol.backend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +38,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
+    private final StockMovementRepository movementRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -160,8 +167,18 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public VariantResponseDto adjustStock(Long variantId, StockAdjustmentDto dto) {
-        ProductVariant variant = variantRepository.findById(variantId)
+    public VariantResponseDto adjustStock(Long variantId, StockAdjustmentDto dto, User user) {
+        StockMovementReason reason = StockMovementReason.fromLabel(dto.getReason())
+                .orElseThrow(() -> new BusinessException("Unknown stock adjustment reason '" + dto.getReason() + "'"));
+        if (dto.getDelta() == 0) {
+            throw new BusinessException("Stock adjustment delta cannot be zero");
+        }
+        if (!reason.allows(dto.getDelta())) {
+            throw new BusinessException(String.format("A %s cannot move stock by %d", reason.getLabel(), dto.getDelta()));
+        }
+
+        // Same row lock as checkout, so a sale and a count never overwrite each other
+        ProductVariant variant = variantRepository.findByIdForUpdate(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Variant", "id", variantId));
 
         int newStock = variant.getStockQuantity() + dto.getDelta();
@@ -173,10 +190,38 @@ public class ProductServiceImpl implements ProductService {
         }
 
         log.info("Stock adjustment — SKU: {}, delta: {}, reason: {}, old: {}, new: {}",
-                variant.getSku(), dto.getDelta(), dto.getReason(), variant.getStockQuantity(), newStock);
+                variant.getSku(), dto.getDelta(), reason.getLabel(), variant.getStockQuantity(), newStock);
 
         variant.setStockQuantity(newStock);
-        return VariantResponseDto.from(variantRepository.save(variant));
+        ProductVariant saved = variantRepository.save(variant);
+        movementRepository.save(StockMovement.builder()
+                .variant(saved)
+                .user(user)
+                .delta(dto.getDelta())
+                .reason(reason.getLabel())
+                .stockAfter(newStock)
+                .build());
+        return VariantResponseDto.from(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StockMovementResponseDto> getStockMovements(Long variantId) {
+        if (!variantRepository.existsById(variantId)) {
+            throw new ResourceNotFoundException("Variant", "id", variantId);
+        }
+        return movementRepository.findRecentByVariantId(variantId).stream()
+                .map(StockMovementResponseDto::from)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StoreVariantLookupDto findBySku(String sku) {
+        ProductVariant variant = variantRepository.findBySku(sku.trim().toUpperCase())
+                .filter(ProductVariant::getIsActive)
+                .orElseThrow(() -> new ResourceNotFoundException("Variant", "sku", sku));
+        return new StoreVariantLookupDto(variant.getId(), ProductResponseDto.from(variant.getProduct()));
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.kickscontrol.backend.service.impl;
 
 import com.kickscontrol.backend.dto.response.*;
 import com.kickscontrol.backend.entity.enums.OrderStatus;
+import com.kickscontrol.backend.entity.enums.StockMovementReason;
 import com.kickscontrol.backend.service.AnalyticsService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -30,9 +31,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         // Facturación y pedidos del periodo
         Object[] revenueRow = (Object[]) em.createQuery(
                 "SELECT COALESCE(SUM(o.totalAmount), 0), COUNT(o) " +
-                "FROM Order o WHERE o.status = :status " +
+                "FROM Order o WHERE o.status IN :sold " +
                 "AND o.createdAt >= :start AND o.createdAt < :end")
-                .setParameter("status", OrderStatus.CONFIRMED)
+                .setParameter("sold", OrderStatus.SOLD)
                 .setParameter("start", start)
                 .setParameter("end", end)
                 .getSingleResult();
@@ -46,9 +47,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         // Unidades vendidas
         Long unitsSold = (Long) em.createQuery(
                 "SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi " +
-                "JOIN oi.order o WHERE o.status = :status " +
+                "JOIN oi.order o WHERE o.status IN :sold " +
                 "AND o.createdAt >= :start AND o.createdAt < :end")
-                .setParameter("status", OrderStatus.CONFIRMED)
+                .setParameter("sold", OrderStatus.SOLD)
                 .setParameter("start", start)
                 .setParameter("end", end)
                 .getSingleResult();
@@ -73,6 +74,21 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 ? Math.round((currentStock / avgDailySales) * 10.0) / 10.0
                 : 0.0;
 
+        // Merma: unidades perdidas (ajustes MERMA) sobre todo lo que salió de la estantería (vendidas + perdidas)
+        Long shrinkUnits = (Long) em.createQuery(
+                "SELECT COALESCE(-SUM(m.delta), 0) FROM StockMovement m " +
+                "WHERE m.reason = :reason AND m.delta < 0 " +
+                "AND m.createdAt >= :start AND m.createdAt < :end")
+                .setParameter("reason", StockMovementReason.MERMA.getLabel())
+                .setParameter("start", start)
+                .setParameter("end", end)
+                .getSingleResult();
+        BigDecimal shrinkageRate = BigDecimal.ZERO;
+        if (unitsSold + shrinkUnits > 0) {
+            shrinkageRate = BigDecimal.valueOf(shrinkUnits * 100.0 / (unitsSold + shrinkUnits))
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
         // Alertas de stock crítico
         Long lowStockCount = (Long) em.createQuery(
                 "SELECT COUNT(pv) FROM ProductVariant pv WHERE pv.stockQuantity <= 5 AND pv.isActive = true")
@@ -86,7 +102,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .lowStockAlerts(lowStockCount.intValue())
                 .sellThroughRate(sellThrough)
                 .avgDaysOfCoverage(daysOfCoverage)
-                .shrinkageRate(BigDecimal.ZERO) // requiere log de ajustes negativos — Sprint futuro
+                .shrinkageRate(shrinkageRate)
+                .shrinkageUnits(shrinkUnits)
                 .build();
     }
 
@@ -108,7 +125,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 "SELECT DATE_TRUNC(:trunc, o.created_at)::date AS period, " +
                 "SUM(o.total_amount) AS revenue, COUNT(o.id) AS orders " +
                 "FROM orders o " +
-                "WHERE o.status = 'CONFIRMED' " +
+                "WHERE o.status IN ('CONFIRMED', 'SHIPPED', 'DELIVERED') " +
                 "AND o.created_at >= :start AND o.created_at < :end " +
                 "GROUP BY period ORDER BY period")
                 .setParameter("trunc", trunc)
@@ -137,11 +154,11 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 "SUM(oi.quantity), SUM(oi.quantity * oi.unitPrice) " +
                 "FROM OrderItem oi " +
                 "JOIN oi.variant pv JOIN pv.product p JOIN oi.order o " +
-                "WHERE o.status = :status " +
+                "WHERE o.status IN :sold " +
                 "AND o.createdAt >= :start AND o.createdAt < :end " +
                 "GROUP BY p.id, p.name, p.brand " +
                 "ORDER BY SUM(oi.quantity * oi.unitPrice) DESC")
-                .setParameter("status", OrderStatus.CONFIRMED)
+                .setParameter("sold", OrderStatus.SOLD)
                 .setParameter("start", start)
                 .setParameter("end", end)
                 .setMaxResults(limit)

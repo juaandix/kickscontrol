@@ -60,6 +60,21 @@ export async function adminAdjustStock(variantId: number, dto: StockAdjustmentDt
   return res.data
 }
 
+export interface StockMovement {
+  id: number
+  delta: number
+  reason: string
+  stockAfter: number
+  /** null when the account that made the change no longer exists */
+  userName: string | null
+  createdAt: string
+}
+
+export async function adminGetStockMovements(variantId: number): Promise<StockMovement[]> {
+  const res = await apiClient.get<StockMovement[]>(`/api/admin/variants/${variantId}/movements`)
+  return res.data
+}
+
 export async function adminGetLowStock(threshold = 5): Promise<ProductVariant[]> {
   const res = await apiClient.get<ProductVariant[]>(`/api/admin/products/inventory/alerts?threshold=${threshold}`)
   return res.data

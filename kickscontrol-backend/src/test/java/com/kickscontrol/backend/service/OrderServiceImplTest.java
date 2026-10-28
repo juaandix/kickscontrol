@@ -1,9 +1,11 @@
 package com.kickscontrol.backend.service;
 
 import com.kickscontrol.backend.dto.request.CheckoutRequest;
+import com.kickscontrol.backend.dto.request.StoreSaleRequest;
 import com.kickscontrol.backend.dto.response.OrderResponseDto;
 import com.kickscontrol.backend.entity.*;
 import com.kickscontrol.backend.entity.enums.OrderStatus;
+import com.kickscontrol.backend.entity.enums.PaymentMethod;
 import com.kickscontrol.backend.entity.enums.UserRole;
 import com.kickscontrol.backend.exception.BusinessException;
 import com.kickscontrol.backend.exception.InsufficientStockException;
@@ -149,7 +151,78 @@ class OrderServiceImplTest {
         verify(cartService, never()).clearCart(any());
     }
 
+    // ─── storeSale ───────────────────────────────────────────────────────────
+
+    @Test
+    void storeSale_byCard_isDeliveredStoreSaleRungUpByStaff() {
+        when(variantRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(variant));
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderResponseDto result = orderService.storeSale(user, saleRequest(PaymentMethod.CARD, null, line(10L, 2)));
+
+        assertThat(result.getChannel()).isEqualTo("STORE");
+        assertThat(result.getStatus()).isEqualTo("DELIVERED");
+        assertThat(result.getSoldBy()).isEqualTo("Test User");
+        assertThat(result.getTotalAmount()).isEqualByComparingTo("200.00");
+        assertThat(variant.getStockQuantity()).isEqualTo(3);
+    }
+
+    @Test
+    void storeSale_inCash_returnsChange() {
+        when(variantRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(variant));
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderResponseDto result = orderService.storeSale(user, saleRequest(PaymentMethod.CASH, new BigDecimal("120.00"), line(10L, 1)));
+
+        assertThat(result.getChange()).isEqualByComparingTo("20.00");
+    }
+
+    @Test
+    void storeSale_cashShortOfTotal_isRejectedAndNothingSaved() {
+        when(variantRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(variant));
+
+        assertThatThrownBy(() -> orderService.storeSale(user, saleRequest(PaymentMethod.CASH, new BigDecimal("50.00"), line(10L, 1))))
+                .isInstanceOf(BusinessException.class);
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void storeSale_sameSkuScannedTwice_isOneLineWithBothUnits() {
+        when(variantRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(variant));
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderResponseDto result = orderService.storeSale(user, saleRequest(PaymentMethod.CARD, null, line(10L, 1), line(10L, 2)));
+
+        assertThat(result.getItems()).hasSize(1);
+        assertThat(result.getItems().get(0).getQuantity()).isEqualTo(3);
+        verify(variantRepository, times(1)).findByIdForUpdate(10L);
+    }
+
+    @Test
+    void storeSale_moreUnitsThanOnTheShelf_throwsInsufficientStock() {
+        when(variantRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(variant));
+
+        assertThatThrownBy(() -> orderService.storeSale(user, saleRequest(PaymentMethod.CARD, null, line(10L, 6))))
+                .isInstanceOf(InsufficientStockException.class);
+        verify(orderRepository, never()).save(any());
+    }
+
     // ─── helpers ─────────────────────────────────────────────────────────────
+
+    private static StoreSaleRequest.Line line(Long variantId, int quantity) {
+        StoreSaleRequest.Line l = new StoreSaleRequest.Line();
+        l.setVariantId(variantId);
+        l.setQuantity(quantity);
+        return l;
+    }
+
+    private static StoreSaleRequest saleRequest(PaymentMethod method, BigDecimal cash, StoreSaleRequest.Line... lines) {
+        StoreSaleRequest r = new StoreSaleRequest();
+        r.setPaymentMethod(method);
+        r.setCashGiven(cash);
+        r.setItems(List.of(lines));
+        return r;
+    }
 
     private CheckoutRequest checkoutRequest(String address) {
         CheckoutRequest r = new CheckoutRequest();

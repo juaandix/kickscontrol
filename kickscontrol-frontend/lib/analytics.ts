@@ -9,6 +9,8 @@ export interface KpiSummaryDto {
   sellThroughRate: number
   avgDaysOfCoverage: number
   shrinkageRate: number
+  /** Units written off as MERMA in the period */
+  shrinkageUnits: number
 }
 
 export interface RevenueDataPointDto {

@@ -129,7 +129,7 @@ export default function InventoryPage() {
                         <span className="type-label text-[0.8125rem] font-bold tabular-nums">{units.format(totalStock)}</span>
                         {(out > 0 || low > 0) && (
                           <span className="type-label mt-0.5 block text-[0.625rem] text-alarm">
-                            {[out > 0 && `${out} agotadas`, low > 0 && `${low} bajas`].filter(Boolean).join(' · ')}
+                            {[out > 0 && `${out} ${out === 1 ? 'agotada' : 'agotadas'}`, low > 0 && `${low} ${low === 1 ? 'baja' : 'bajas'}`].filter(Boolean).join(' · ')}
                           </span>
                         )}
                       </td>

@@ -63,13 +63,19 @@ CREATE TABLE IF NOT EXISTS orders (
     status           order_status NOT NULL DEFAULT 'PENDING',
     total_amount     NUMERIC(10, 2) NOT NULL,
     shipping_address TEXT,
+    channel          VARCHAR(10) NOT NULL DEFAULT 'ONLINE',
+    payment_method   VARCHAR(10),
+    cash_given       NUMERIC(10, 2),
     created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMP NOT NULL DEFAULT NOW()
+    updated_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_order_channel CHECK (channel IN ('ONLINE', 'STORE')),
+    CONSTRAINT chk_order_payment CHECK (payment_method IS NULL OR payment_method IN ('CARD', 'CASH'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_user_id            ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status             ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at_status  ON orders(created_at, status);
+CREATE INDEX IF NOT EXISTS idx_orders_channel_created    ON orders(channel, created_at);
 
 -- Order Items
 CREATE TABLE IF NOT EXISTS order_items (
@@ -94,6 +100,23 @@ CREATE TABLE IF NOT EXISTS cart_items (
     CONSTRAINT chk_cart_quantity CHECK (quantity > 0),
     CONSTRAINT uq_cart_user_variant UNIQUE (user_id, variant_id)
 );
+
+-- Stock Movements (every manual change to a variant's stock: who, why, how many, what was left)
+CREATE TABLE IF NOT EXISTS stock_movements (
+    id          BIGSERIAL PRIMARY KEY,
+    variant_id  BIGINT NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+    user_id     BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    delta       INT NOT NULL,
+    reason      VARCHAR(20) NOT NULL,
+    stock_after INT NOT NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_movement_delta  CHECK (delta <> 0),
+    CONSTRAINT chk_movement_after  CHECK (stock_after >= 0),
+    CONSTRAINT chk_movement_reason CHECK (reason IN ('RECEPCIÓN', 'DEVOLUCIÓN', 'AJUSTE', 'MERMA'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_movements_variant_created ON stock_movements(variant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_movements_reason_created  ON stock_movements(reason, created_at);
 
 -- ============================================================
 -- Analytics Views

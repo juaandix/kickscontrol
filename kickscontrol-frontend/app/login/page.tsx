@@ -10,6 +10,8 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = searchParams.get('returnTo') ?? '/'
+  // Sent here from the physical store's till or stock: a staff sign-in that leads back to the store
+  const fromStore = returnTo.startsWith('/tienda')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -35,8 +37,8 @@ function LoginForm() {
     <div className="sheet min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link href="/" className="type-style text-[2.75rem]">KicksControl</Link>
-          <p className="text-ink-soft text-sm mt-1">Inicia sesión en tu cuenta</p>
+          <Link href={fromStore ? '/tienda' : '/'} className="type-style text-[2.75rem]">KicksControl</Link>
+          <p className="text-ink-soft text-sm mt-1">{fromStore ? 'Acceso del personal de tienda' : 'Inicia sesión en tu cuenta'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="border-t border-form p-6 space-y-4">
@@ -62,10 +64,16 @@ function LoginForm() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-ink-soft mt-4">
-          ¿No tienes cuenta?{' '}
-          <Link href="/register" className="text-form font-semibold hover:underline">Regístrate</Link>
-        </p>
+        {fromStore ? (
+          <p className="text-center text-sm mt-4">
+            <Link href="/tienda" className="text-ink-soft hover:text-ink">← Volver a la tienda</Link>
+          </p>
+        ) : (
+          <p className="text-center text-sm text-ink-soft mt-4">
+            ¿No tienes cuenta?{' '}
+            <Link href="/register" className="text-form font-semibold hover:underline">Regístrate</Link>
+          </p>
+        )}
       </div>
     </div>
   )
